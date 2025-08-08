@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Dots & Boxes with Timer</title>
+<title>Dots & Boxes with Timer & Clear Hover</title>
 <style>
     body {
         font-family: Arial, sans-serif;
@@ -70,6 +70,7 @@ let timerPerPlayer = 0;
 let timers = {1: 0, 2: 0};
 let timerIntervals = {};
 let hoverLine = null;
+let hoverBoxes = [];
 
 function initGame() {
     gridSize = parseInt(document.getElementById('gridSize').value);
@@ -80,17 +81,20 @@ function initGame() {
     p2Score = 0;
     currentPlayer = 1;
     hoverLine = null;
+    hoverBoxes = [];
     timerPerPlayer = parseInt(document.getElementById('timerSelect').value);
     timers = {1: timerPerPlayer, 2: timerPerPlayer};
     clearInterval(timerIntervals[1]);
     clearInterval(timerIntervals[2]);
     if (timerPerPlayer > 0) startTimer(1);
 
+    // Horizontal lines
     for (let r = 0; r <= gridSize; r++) {
         for (let c = 0; c < gridSize; c++) {
             lines.push({x: c * boxSize, y: r * boxSize, orientation: 'h', claimed: false});
         }
     }
+    // Vertical lines
     for (let r = 0; r < gridSize; r++) {
         for (let c = 0; c <= gridSize; c++) {
             lines.push({x: c * boxSize, y: r * boxSize, orientation: 'v', claimed: false});
@@ -108,6 +112,14 @@ function initGame() {
 
 function drawBoard() {
     ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    // Draw hover box highlight first
+    hoverBoxes.forEach(box => {
+        ctx.fillStyle = currentPlayer === 1 ? 'rgba(0,0,255,0.5)' : 'rgba(255,0,0,0.5)';
+        ctx.fillRect(box.c * boxSize, box.r * boxSize, boxSize, boxSize);
+    });
+
+    // Draw dots
     ctx.fillStyle = '#000';
     for (let r = 0; r <= gridSize; r++) {
         for (let c = 0; c <= gridSize; c++) {
@@ -116,13 +128,15 @@ function drawBoard() {
             ctx.fill();
         }
     }
+
+    // Draw lines
     lines.forEach(line => {
         if (line.claimed) {
             ctx.strokeStyle = line.player === 1 ? 'blue' : 'red';
             ctx.lineWidth = 4;
         } else if (hoverLine === line) {
-            ctx.strokeStyle = currentPlayer === 1 ? 'rgba(0,0,255,0.5)' : 'rgba(255,0,0,0.5)';
-            ctx.lineWidth = 8;
+            ctx.strokeStyle = currentPlayer === 1 ? 'blue' : 'red';
+            ctx.lineWidth = 8; // bigger line for hover
         } else {
             ctx.strokeStyle = '#aaa';
             ctx.lineWidth = 2;
@@ -138,6 +152,7 @@ function drawBoard() {
         ctx.stroke();
     });
 
+    // Draw claimed boxes
     boxes.forEach(box => {
         if (box.owner) {
             ctx.fillStyle = box.owner === 1 ? 'rgba(0,0,255,0.2)' : 'rgba(255,0,0,0.2)';
@@ -147,7 +162,7 @@ function drawBoard() {
 }
 
 function getLineAtPos(x, y) {
-    const tolerance = 10; // easier clicking
+    const tolerance = 10;
     return lines.find(line => {
         if (line.orientation === 'h') {
             return Math.abs(y - line.y) < tolerance &&
@@ -159,11 +174,48 @@ function getLineAtPos(x, y) {
     });
 }
 
+function getBoxesCompletedByLine(line) {
+    let possibleBoxes = [];
+    if (line.orientation === 'h') {
+        // Box above
+        if (line.y > 0) {
+            let topBox = boxes.find(b => b.r * boxSize === line.y - boxSize && b.c * boxSize === line.x);
+            if (topBox) possibleBoxes.push(topBox);
+        }
+        // Box below
+        if (line.y < gridSize * boxSize) {
+            let bottomBox = boxes.find(b => b.r * boxSize === line.y && b.c * boxSize === line.x);
+            if (bottomBox) possibleBoxes.push(bottomBox);
+        }
+    } else {
+        // Box to left
+        if (line.x > 0) {
+            let leftBox = boxes.find(b => b.c * boxSize === line.x - boxSize && b.r * boxSize === line.y);
+            if (leftBox) possibleBoxes.push(leftBox);
+        }
+        // Box to right
+        if (line.x < gridSize * boxSize) {
+            let rightBox = boxes.find(b => b.c * boxSize === line.x && b.r * boxSize === line.y);
+            if (rightBox) possibleBoxes.push(rightBox);
+        }
+    }
+    // Filter only ones that would be completed
+    return possibleBoxes.filter(box => {
+        const top = lines.find(l => l.orientation === 'h' && l.x === box.c * boxSize && l.y === box.r * boxSize);
+        const bottom = lines.find(l => l.orientation === 'h' && l.x === box.c * boxSize && l.y === (box.r + 1) * boxSize);
+        const left = lines.find(l => l.orientation === 'v' && l.x === box.c * boxSize && l.y === box.r * boxSize);
+        const right = lines.find(l => l.orientation === 'v' && l.x === (box.c + 1) * boxSize && l.y === box.r * boxSize);
+        let count = [top, bottom, left, right].filter(l => l.claimed || l === line).length;
+        return count === 4;
+    });
+}
+
 canvas.addEventListener('mousemove', e => {
     const rect = canvas.getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
     hoverLine = getLineAtPos(mouseX, mouseY) || null;
+    hoverBoxes = hoverLine ? getBoxesCompletedByLine(hoverLine) : [];
     drawBoard();
 });
 
@@ -173,6 +225,8 @@ canvas.addEventListener('click', e => {
     hoverLine.player = currentPlayer;
     let completed = checkBoxes();
     if (!completed) switchPlayer();
+    hoverLine = null;
+    hoverBoxes = [];
     drawBoard();
     updateScores();
 });
