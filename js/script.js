@@ -90,11 +90,13 @@ function findAndFillChain(startBox, previousBox, currentPlayerClass) {
       currentBox = null;
     } else {
       // The box has two or more unclicked neighbors, invalidating the single-path chain.
+      // Set the flag to true because this is a valid chain end.
+      chainIsValid = true;
       currentBox = null;
     }
   }
 
-  // Only fill the chain if it's a valid, closed chain
+  // Only fill the chain if it's a valid chain
   if (chainIsValid) {
     chain.forEach(boxInChain => {
       boxInChain.classList.add(currentPlayerClass);
