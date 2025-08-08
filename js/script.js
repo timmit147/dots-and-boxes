@@ -63,7 +63,7 @@ function findAndFillChain(startBox, previousBox, currentPlayerClass) {
   const chain = [];
   let currentBox = startBox;
   let prevBox = previousBox;
-  let chainIsValid = false;
+  let isClosedChain = false; // Renamed for clarity
 
   // Follow the chain as long as it has a single path
   while (currentBox && !clickedBoxes.has(currentBox)) {
@@ -79,25 +79,24 @@ function findAndFillChain(startBox, previousBox, currentPlayerClass) {
         prevBox = currentBox;
         currentBox = unclickedNeighbors[0];
       } else {
-        // The chain ends because it has more than one path or no path
+        // The chain ends because it has no path (shouldn't happen in a valid chain)
         currentBox = null;
       }
     } else if (unclickedCount === 0) {
       // The chain ends with a box having 0 unclicked neighbors,
       // meaning it's a valid, closed chain.
       chain.push(currentBox);
-      chainIsValid = true;
+      isClosedChain = true;
       currentBox = null;
     } else {
-      // The box has two or more unclicked neighbors, invalidating the single-path chain.
-      // Set the flag to true because this is a valid chain end.
-      chainIsValid = true;
+      // The box has two or more unclicked neighbors,
+      // invalidating the closed-chain condition.
       currentBox = null;
     }
   }
 
-  // Only fill the chain if it's a valid chain
-  if (chainIsValid) {
+  // Only fill the chain if it's a valid, closed chain
+  if (isClosedChain) {
     chain.forEach(boxInChain => {
       boxInChain.classList.add(currentPlayerClass);
       clickedBoxes.add(boxInChain);
