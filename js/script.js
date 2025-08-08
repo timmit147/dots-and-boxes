@@ -59,43 +59,43 @@ function countUnclickedNeighbors(box, excludedBox = null) {
   }, 0);
 }
 
-function findAndFillClosedChain(startBox, previousBox, currentPlayerClass) {
+function findAndFillChain(startBox, previousBox, currentPlayerClass) {
   const chain = [];
   let currentBox = startBox;
   let prevBox = previousBox;
-  let isClosed = false;
+  let chainIsValid = false;
 
-  // Follow the chain to find its end or if it forms a closed loop
+  // Follow the chain as long as it has a single path
   while (currentBox && !clickedBoxes.has(currentBox)) {
     const unclickedCount = countUnclickedNeighbors(currentBox, prevBox);
     
-    // A chain is formed by boxes with only one unclicked neighbor
-    if (unclickedCount === 1) {
+    // Check if the current box is a valid link in the chain
+    if (unclickedCount <= 1) {
       chain.push(currentBox);
-      const neighbors = getNeighbors(Math.floor(getBoxIndex(currentBox) / cols), getBoxIndex(currentBox) % cols);
       
+      const neighbors = getNeighbors(Math.floor(getBoxIndex(currentBox) / cols), getBoxIndex(currentBox) % cols);
       const unclickedNeighbors = neighbors.filter(nb => !clickedBoxes.has(nb) && nb !== prevBox);
       
       if (unclickedNeighbors.length === 1) {
         prevBox = currentBox;
         currentBox = unclickedNeighbors[0];
+      } else if (unclickedNeighbors.length === 0) {
+        // The chain ends here with a box having 0 unclicked neighbors,
+        // which means it's a valid, closed chain.
+        chainIsValid = true;
+        currentBox = null;
       } else {
-        // This should not happen in a valid chain, but just in case
+        // The box has two or more unclicked neighbors, invalidating the single-path chain.
         currentBox = null;
       }
-    } else if (unclickedCount === 0) {
-      // The chain has looped back or ended in a box with no unclicked neighbors
-      chain.push(currentBox);
-      isClosed = true;
-      currentBox = null;
     } else {
-      // The box has two or more unclicked neighbors, so the chain is not a single path
+      // This box is not part of a single-path chain.
       currentBox = null;
     }
   }
 
-  // Only fill the chain if it is a closed loop
-  if (isClosed && chain.length > 0) {
+  // Only fill the chain if it's a valid, closed chain
+  if (chainIsValid) {
     chain.forEach(boxInChain => {
       boxInChain.classList.add(currentPlayerClass);
       clickedBoxes.add(boxInChain);
@@ -124,9 +124,9 @@ function findAndFillClosedChain(startBox, previousBox, currentPlayerClass) {
       if (!clickedBoxes.has(nb)) {
         const unclickedCount = countUnclickedNeighbors(nb, el);
         
-        // A potential chain starts with a neighbor having only one unclicked path
+        // A potential chain starts with a neighbor having exactly one unclicked path.
         if (unclickedCount === 1) {
-          findAndFillClosedChain(nb, el, currentPlayerClass);
+          findAndFillChain(nb, el, currentPlayerClass);
         }
       }
     });
