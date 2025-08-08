@@ -1,43 +1,112 @@
 <html>
 <body>
-  <div class="board">
-    <div class="box1"></div>
-    <div class="box2"></div>
-    <div class="box3"></div>
-    <div class="box4"></div>
-    <div class="box5"></div>
-    <div class="box6"></div>
-    <div class="box7"></div>
-    <div class="box8"></div>
-    <div class="box9"></div>
-    <div class="box10"></div>
-    <div class="box11"></div>
-    <div class="box12"></div>
-    <div class="box13"></div>
-    <div class="box14"></div>
-    <div class="box15"></div>
-    <div class="box16"></div>
-  </div>
+  <div class="board"></div>
+
+  <script>
+    const board = document.querySelector('.board');
+    const size = 4; // 4x4 grid
+    
+    // Create boxes with 4 lines each (lines will be divs inside each box)
+    for (let i = 0; i < size * size; i++) {
+      const box = document.createElement('div');
+      box.classList.add('box');
+      box.dataset.index = i;
+      
+      // Create 4 lines (top, right, bottom, left)
+      ['top', 'right', 'bottom', 'left'].forEach(direction => {
+        const line = document.createElement('div');
+        line.classList.add('line', direction);
+        line.dataset.boxIndex = i;
+        line.dataset.direction = direction;
+        
+        // Add click event to toggle line presence
+        line.addEventListener('click', () => {
+          line.classList.toggle('active');
+          checkBoxCompleted(i);
+        });
+        
+        box.appendChild(line);
+      });
+      
+      board.appendChild(box);
+    }
+    
+    function checkBoxCompleted(index) {
+      // Check if all 4 lines for box `index` are active
+      const box = board.querySelector(`.box[data-index='${index}']`);
+      const lines = box.querySelectorAll('.line');
+      const allActive = [...lines].every(line => line.classList.contains('active'));
+      
+      if (allActive) {
+        box.classList.add('filled');
+      } else {
+        box.classList.remove('filled');
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: black;
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .board {
+      background-color: white;
+      width: 90vw;
+      height: 90vw;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      grid-template-rows: repeat(4, 1fr);
+      gap: 0; /* no gap */
+      position: relative;
+    }
+    .box {
+      position: relative;
+      background-color: white;
+    }
+    /* Lines */
+    .line {
+      position: absolute;
+      background-color: transparent;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    .line.active {
+      background-color: blue;
+    }
+    /* Positions and sizes of lines */
+    .line.top {
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 5px;
+    }
+    .line.right {
+      top: 0;
+      right: 0;
+      width: 5px;
+      height: 100%;
+    }
+    .line.bottom {
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 5px;
+    }
+    .line.left {
+      top: 0;
+      left: 0;
+      width: 5px;
+      height: 100%;
+    }
+    /* When box is completed */
+    .box.filled {
+      background-color: lightblue;
+    }
+  </style>
 </body>
 </html>
-<style>
-  body{
-    background-color:black;
-  }
-  .board {
-    background-color: white;
-    width: 90vw;
-    height: 90vw;
-    position: fixed;
-    justify-self: center;
-    position-area: center;
-     display: grid;
-    grid-template-columns: repeat(4, 1fr); /* 4 equal columns */
-    grid-template-rows: repeat(4, 1fr);
-    border:1px solid white;
-}
-.board > div {
-    border: 2px solid white;
-}
-  
-</style>
