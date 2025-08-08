@@ -70,6 +70,7 @@ function followChain(startBox, previousBox) {
 
     const unclickedNeighbors = neighbors.filter(nb => !clickedBoxes.has(nb) && nb !== prevBox);
     
+    // A valid chain link must have only one unclicked neighbor (not including the previous box in the chain)
     if (unclickedNeighbors.length !== 1) {
       return chain;
     }
@@ -97,21 +98,27 @@ function followChain(startBox, previousBox) {
     const row = Math.floor(index / cols);
     const col = index % cols;
 
+    let chainsFilled = 0; // Tracks how many chains are filled in a single turn
+
     getNeighbors(row, col).forEach(nb => {
-      if (!clickedBoxes.has(nb)) {
-        const unclickedCount = countUnclickedNeighbors(nb);
-        if (unclickedCount === 1) {
-          const chain = followChain(nb, el);
-          if (chain && chain.length > 0) {
-            chain.forEach(boxInChain => {
-              boxInChain.classList.add(currentPlayerClass);
-              clickedBoxes.add(boxInChain);
-            });
-          }
+      // Check if a neighbor becomes part of a chain with only one other unclicked neighbor
+      if (!clickedBoxes.has(nb) && countUnclickedNeighbors(nb, el) === 1) {
+        const chain = followChain(nb, el);
+        
+        // Ensure the found chain is not just a single box
+        if (chain.length > 0) {
+          chain.forEach(boxInChain => {
+            boxInChain.classList.add(currentPlayerClass);
+            clickedBoxes.add(boxInChain);
+          });
+          chainsFilled++;
         }
       }
     });
 
-    isPlayer1Turn = !isPlayer1Turn;
+    // Only switch player turns if no chains were filled
+    if (chainsFilled === 0) {
+      isPlayer1Turn = !isPlayer1Turn;
+    }
   });
 })();
