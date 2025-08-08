@@ -8,6 +8,7 @@ body{
     justify-self: center;
     position-area: center;
      display: grid;
+grid-gap: 0;
 }
 .box{
 background-color:white;
