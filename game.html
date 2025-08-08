@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Dots & Boxes with Timer</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        text-align: center;
+        background: #f2f2f2;
+    }
+    canvas {
+        background: white;
+        cursor: pointer;
+    }
+    #controls {
+        margin: 10px;
+    }
+    button, select {
+        margin: 5px;
+        padding: 5px 10px;
+        font-size: 14px;
+    }
+    .scoreboard {
+        display: flex;
+        justify-content: center;
+        gap: 20px;
+        font-weight: bold;
+        margin-bottom: 10px;
+    }
+</style>
+</head>
+<body>
+<h1>Dots & Boxes</h1>
+
+<div id="controls">
+    Grid Size:
+    <select id="gridSize">
+        <option value="3">3x3</option>
+        <option value="4">4x4</option>
+        <option value="5" selected>5x5</option>
+    </select>
+    Timer:
+    <select id="timerSelect">
+        <option value="0">No timer</option>
+        <option value="60">1 min</option>
+        <option value="180">3 min</option>
+        <option value="300">5 min</option>
+    </select>
+    <button id="newGame">New Game</button>
+</div>
+
+<div class="scoreboard">
+    <div>Player 1: <span id="p1Score">0</span> (<span id="p1Time">--</span>)</div>
+    <div>Player 2: <span id="p2Score">0</span> (<span id="p2Time">--</span>)</div>
+</div>
+
+<canvas id="gameCanvas" width="500" height="500"></canvas>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+let gridSize = 5;
+let boxSize = canvas.width / gridSize;
+let lines = [];
+let boxes = [];
+let currentPlayer = 1;
+let p1Score = 0, p2Score = 0;
+let timerPerPlayer = 0;
+let timers = {1: 0, 2: 0};
+let timerIntervals = {};
+let hoverLine = null;
+
+function initGame() {
+    gridSize = parseInt(document.getElementById('gridSize').value);
+    boxSize = canvas.width / gridSize;
+    lines = [];
+    boxes = [];
+    p1Score = 0;
+    p2Score = 0;
+    currentPlayer = 1;
+    hoverLine = null;
+    timerPerPlayer = parseInt(document.getElementById('timerSelect').value);
+    timers = {1: timerPerPlayer, 2: timerPerPlayer};
+    clearInterval(timerIntervals[1]);
+    clearInterval(timerIntervals[2]);
+    if (timerPerPlayer > 0) startTimer(1);
+
+    for (let r = 0; r <= gridSize; r++) {
+        for (let c = 0; c < gridSize; c++) {
+            lines.push({x: c * boxSize, y: r * boxSize, orientation: 'h', claimed: false});
+        }
+    }
+    for (let r = 0; r < gridSize; r++) {
+        for (let c = 0; c <= gridSize; c++) {
+            lines.push({x: c * boxSize, y: r * boxSize, orientation: 'v', claimed: false});
+        }
+    }
+
+    for (let r = 0; r < gridSize; r++) {
+        for (let c = 0; c < gridSize; c++) {
+            boxes.push({r, c, owner: 0});
+        }
+    }
+    drawBoard();
+    updateScores();
+}
+
+function drawBoard() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle = '#000';
+    for (let r = 0; r <= gridSize; r++) {
+        for (let c = 0; c <= gridSize; c++) {
+            ctx.beginPath();
+            ctx.arc(c * boxSize, r * boxSize, 5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+    lines.forEach(line => {
+        if (line.claimed) {
+            ctx.strokeStyle = line.player === 1 ? 'blue' : 'red';
+            ctx.lineWidth = 4;
+        } else if (hoverLine === line) {
+            ctx.strokeStyle = currentPlayer === 1 ? 'rgba(0,0,255,0.5)' : 'rgba(255,0,0,0.5)';
+            ctx.lineWidth = 8;
+        } else {
+            ctx.strokeStyle = '#aaa';
+            ctx.lineWidth = 2;
+        }
+        ctx.beginPath();
+        if (line.orientation === 'h') {
+            ctx.moveTo(line.x, line.y);
+            ctx.lineTo(line.x + boxSize, line.y);
+        } else {
+            ctx.moveTo(line.x, line.y);
+            ctx.lineTo(line.x, line.y + boxSize);
+        }
+        ctx.stroke();
+    });
+
+    boxes.forEach(box => {
+        if (box.owner) {
+            ctx.fillStyle = box.owner === 1 ? 'rgba(0,0,255,0.2)' : 'rgba(255,0,0,0.2)';
+            ctx.fillRect(box.c * boxSize, box.r * boxSize, boxSize, boxSize);
+        }
+    });
+}
+
+function getLineAtPos(x, y) {
+    const tolerance = 10; // easier clicking
+    return lines.find(line => {
+        if (line.orientation === 'h') {
+            return Math.abs(y - line.y) < tolerance &&
+                   x > line.x - tolerance && x < line.x + boxSize + tolerance;
+        } else {
+            return Math.abs(x - line.x) < tolerance &&
+                   y > line.y - tolerance && y < line.y + boxSize + tolerance;
+        }
+    });
+}
+
+canvas.addEventListener('mousemove', e => {
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    hoverLine = getLineAtPos(mouseX, mouseY) || null;
+    drawBoard();
+});
+
+canvas.addEventListener('click', e => {
+    if (!hoverLine || hoverLine.claimed) return;
+    hoverLine.claimed = true;
+    hoverLine.player = currentPlayer;
+    let completed = checkBoxes();
+    if (!completed) switchPlayer();
+    drawBoard();
+    updateScores();
+});
+
+function checkBoxes() {
+    let completed = false;
+    boxes.forEach(box => {
+        if (!box.owner) {
+            const top = lines.find(l => l.orientation === 'h' && l.x === box.c * boxSize && l.y === box.r * boxSize);
+            const bottom = lines.find(l => l.orientation === 'h' && l.x === box.c * boxSize && l.y === (box.r + 1) * boxSize);
+            const left = lines.find(l => l.orientation === 'v' && l.x === box.c * boxSize && l.y === box.r * boxSize);
+            const right = lines.find(l => l.orientation === 'v' && l.x === (box.c + 1) * boxSize && l.y === box.r * boxSize);
+            if (top.claimed && bottom.claimed && left.claimed && right.claimed) {
+                box.owner = currentPlayer;
+                if (currentPlayer === 1) p1Score++;
+                else p2Score++;
+                completed = true;
+            }
+        }
+    });
+    return completed;
+}
+
+function switchPlayer() {
+    if (timerPerPlayer > 0) {
+        clearInterval(timerIntervals[currentPlayer]);
+    }
+    currentPlayer = currentPlayer === 1 ? 2 : 1;
+    if (timerPerPlayer > 0) startTimer(currentPlayer);
+}
+
+function startTimer(player) {
+    timerIntervals[player] = setInterval(() => {
+        timers[player]--;
+        updateScores();
+        if (timers[player] <= 0) {
+            clearInterval(timerIntervals[player]);
+            alert(`Player ${player} ran out of time! Player ${player === 1 ? 2 : 1} wins!`);
+            initGame();
+        }
+    }, 1000);
+}
+
+function updateScores() {
+    document.getElementById('p1Score').textContent = p1Score;
+    document.getElementById('p2Score').textContent = p2Score;
+    document.getElementById('p1Time').textContent = timerPerPlayer > 0 ? timers[1] : '--';
+    document.getElementById('p2Time').textContent = timerPerPlayer > 0 ? timers[2] : '--';
+}
+
+document.getElementById('newGame').addEventListener('click', initGame);
+initGame();
+</script>
+</body>
+</html>
