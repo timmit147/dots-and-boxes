@@ -2,7 +2,6 @@ body{
     background-color:#9bd1f7;
   }
 .board {
-    background-color: white;
     width: 90vw;
     height: 90vw;
     position: fixed;
@@ -10,7 +9,9 @@ body{
     position-area: center;
      display: grid;
 }
-
+.box{
+background-color:white;
+}
 .even{
         background-color:#9bd1f7;
 }
