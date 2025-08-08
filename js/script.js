@@ -88,17 +88,13 @@ function findAndFillChain(startBox, previousBox, currentPlayerClass) {
       chain.push(currentBox);
       chainIsValid = true;
       currentBox = null;
-    } else if (unclickedCount >= 2) {
-      // The chain ends with a box having 2 or more unclicked neighbors.
-      // This is also a valid chain, but the last box isn't colored.
-      chainIsValid = true;
-      currentBox = null;
     } else {
+      // The box has two or more unclicked neighbors, invalidating the single-path chain.
       currentBox = null;
     }
   }
 
-  // Only fill the chain if it's a valid chain
+  // Only fill the chain if it's a valid, closed chain
   if (chainIsValid) {
     chain.forEach(boxInChain => {
       boxInChain.classList.add(currentPlayerClass);
