@@ -43,7 +43,7 @@ function getNeighbors(row, col) {
   return neighbors;
 }
 
-function countUnclickedNeighbors(box, excludedBoxes = new Set()) {
+function countUnclickedNeighbors(box, excludedBox = null) {
   const index = getBoxIndex(box);
   if (index === -1) return 0;
 
@@ -53,38 +53,47 @@ function countUnclickedNeighbors(box, excludedBoxes = new Set()) {
   const neighbors = getNeighbors(row, col);
 
   return neighbors.reduce((count, nb) => {
-    // Exclude boxes in the temporary set and any already clicked boxes
-    if (excludedBoxes.has(nb)) return count;
+    if (nb === excludedBox) return count;
     if (!clickedBoxes.has(nb)) return count + 1;
     return count;
   }, 0);
 }
 
-function fillChain(startBox, currentPlayerClass, excludedBoxes) {
-  // Use a temporary set to keep track of boxes in the current chain
-  excludedBoxes.add(startBox);
+function findAndFillChain(startBox, previousBox, currentPlayerClass) {
+  const chain = [];
+  let currentBox = startBox;
+  let prevBox = previousBox;
 
-  // Check neighbors of the starting box
-  const index = getBoxIndex(startBox);
-  if (index === -1) return;
+  // Follow the chain as long as it has only one unclicked neighbor
+  while (currentBox && !clickedBoxes.has(currentBox)) {
+    const unclickedCount = countUnclickedNeighbors(currentBox, prevBox);
 
-  const row = Math.floor(index / cols);
-  const col = index % cols;
-
-  getNeighbors(row, col).forEach(nb => {
-    // Only proceed if the neighbor is unclicked and not already part of this chain
-    if (!clickedBoxes.has(nb) && !excludedBoxes.has(nb)) {
-      const unclickedCount = countUnclickedNeighbors(nb, excludedBoxes);
+    if (unclickedCount <= 1) {
+      chain.push(currentBox);
+      const neighbors = getNeighbors(Math.floor(getBoxIndex(currentBox) / cols), getBoxIndex(currentBox) % cols);
       
-      // If a neighbor has 0 or 1 other unclicked neighbors, fill it and continue the chain
-      if (unclickedCount <= 1) {
-        nb.classList.add(currentPlayerClass);
-        clickedBoxes.add(nb);
-        // Recursively call fillChain to continue the process from this new box
-        fillChain(nb, currentPlayerClass, excludedBoxes);
+      const unclickedNeighbors = neighbors.filter(nb => !clickedBoxes.has(nb) && nb !== prevBox);
+      
+      if (unclickedNeighbors.length === 1) {
+        prevBox = currentBox;
+        currentBox = unclickedNeighbors[0];
+      } else {
+        // Chain ends here, as there are no more single paths
+        currentBox = null;
       }
+    } else {
+      // The box has more than one unclicked neighbor, so the chain breaks
+      currentBox = null;
     }
-  });
+  }
+
+  // Fill all the boxes collected in the chain
+  if (chain.length > 0) {
+    chain.forEach(boxInChain => {
+      boxInChain.classList.add(currentPlayerClass);
+      clickedBoxes.add(boxInChain);
+    });
+  }
 }
 
 (function addClickListener() {
@@ -98,10 +107,23 @@ function fillChain(startBox, currentPlayerClass, excludedBoxes) {
     el.classList.add(currentPlayerClass);
     clickedBoxes.add(el);
 
-    // Start the chain-filling process from the clicked box
-    fillChain(el, currentPlayerClass, new Set());
+    const index = getBoxIndex(el);
+    if (index === -1) return;
 
-    // Toggle the player turn after every click, regardless of chain length
+    const row = Math.floor(index / cols);
+    const col = index % cols;
+
+    getNeighbors(row, col).forEach(nb => {
+      if (!clickedBoxes.has(nb)) {
+        const unclickedCount = countUnclickedNeighbors(nb, el);
+        
+        // If a neighbor is an end of a line (0 or 1 unclicked neighbors), fill it and potentially a chain
+        if (unclickedCount <= 1) {
+          findAndFillChain(nb, el, currentPlayerClass);
+        }
+      }
+    });
+
     isPlayer1Turn = !isPlayer1Turn;
   });
 })();
