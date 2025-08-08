@@ -1,0 +1,24 @@
+body{
+    background-color:#9bd1f7;
+  }
+.board {
+    background-color: white;
+    width: 90vw;
+    height: 90vw;
+    position: fixed;
+    justify-self: center;
+    position-area: center;
+     display: grid;
+}
+
+.even{
+        background-color:#9bd1f7;
+}
+
+.player_1{
+    background-color:#ea5454;
+}
+
+.player_2{
+    background-color:#6bca57;
+}
