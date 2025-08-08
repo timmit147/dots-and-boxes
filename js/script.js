@@ -59,16 +59,18 @@ function countUnclickedNeighbors(box, excludedBox = null) {
   }, 0);
 }
 
-function findAndFillChain(startBox, previousBox, currentPlayerClass) {
+function findAndFillClosedChain(startBox, previousBox, currentPlayerClass) {
   const chain = [];
   let currentBox = startBox;
   let prevBox = previousBox;
+  let isClosed = false;
 
-  // Follow the chain as long as it has only one unclicked neighbor
+  // Follow the chain to find its end or if it forms a closed loop
   while (currentBox && !clickedBoxes.has(currentBox)) {
     const unclickedCount = countUnclickedNeighbors(currentBox, prevBox);
-
-    if (unclickedCount <= 1) {
+    
+    // A chain is formed by boxes with only one unclicked neighbor
+    if (unclickedCount === 1) {
       chain.push(currentBox);
       const neighbors = getNeighbors(Math.floor(getBoxIndex(currentBox) / cols), getBoxIndex(currentBox) % cols);
       
@@ -78,17 +80,22 @@ function findAndFillChain(startBox, previousBox, currentPlayerClass) {
         prevBox = currentBox;
         currentBox = unclickedNeighbors[0];
       } else {
-        // Chain ends here, as there are no more single paths
+        // This should not happen in a valid chain, but just in case
         currentBox = null;
       }
+    } else if (unclickedCount === 0) {
+      // The chain has looped back or ended in a box with no unclicked neighbors
+      chain.push(currentBox);
+      isClosed = true;
+      currentBox = null;
     } else {
-      // The box has more than one unclicked neighbor, so the chain breaks
+      // The box has two or more unclicked neighbors, so the chain is not a single path
       currentBox = null;
     }
   }
 
-  // Fill all the boxes collected in the chain
-  if (chain.length > 0) {
+  // Only fill the chain if it is a closed loop
+  if (isClosed && chain.length > 0) {
     chain.forEach(boxInChain => {
       boxInChain.classList.add(currentPlayerClass);
       clickedBoxes.add(boxInChain);
@@ -117,9 +124,9 @@ function findAndFillChain(startBox, previousBox, currentPlayerClass) {
       if (!clickedBoxes.has(nb)) {
         const unclickedCount = countUnclickedNeighbors(nb, el);
         
-        // If a neighbor is an end of a line (0 or 1 unclicked neighbors), fill it and potentially a chain
-        if (unclickedCount <= 1) {
-          findAndFillChain(nb, el, currentPlayerClass);
+        // A potential chain starts with a neighbor having only one unclicked path
+        if (unclickedCount === 1) {
+          findAndFillClosedChain(nb, el, currentPlayerClass);
         }
       }
     });
