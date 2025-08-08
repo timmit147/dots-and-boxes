@@ -1,424 +1,300 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Dots &amp; Boxes — Single File</title>
-  <style>
-    :root{--bg:#0f1724;--panel:#0b1220;--accent:#06b6d4;--p1:#7c3aed;--p2:#ef4444;--muted:#94a3b8}
-    html,body{height:100%;margin:0;font-family:Inter,Segoe UI,Roboto,system-ui,Arial;background:linear-gradient(180deg,#071027 0%,#071725 100%);color:#e6eef8}
-    .app{max-width:1100px;margin:24px auto;padding:20px;background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);border-radius:12px;box-shadow:0 8px 30px rgba(2,6,23,0.6)}
-    header{display:flex;gap:12px;align-items:center;justify-content:space-between}
-    h1{font-size:18px;margin:0}
-    .controls{display:flex;gap:12px;align-items:center}
-    select,input[type=number]{padding:6px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.02);color:inherit}
-    button{padding:8px 12px;border-radius:10px;border:0;background:var(--accent);color:#012;cursor:pointer}
-    .layout{display:grid;grid-template-columns:320px 1fr;gap:20px;margin-top:18px}
-    .panel{background:rgba(255,255,255,0.02);padding:14px;border-radius:10px}
-    .status{display:flex;flex-direction:column;gap:8px}
-    .player{display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px}
-    .player .dot{width:18px;height:18px;border-radius:50%}
-    .turn{box-shadow:0 6px 18px rgba(0,0,0,0.6) inset;border-left:4px solid rgba(255,255,255,0.03)}
-    .board-wrap{display:flex;flex-direction:column;gap:8px;align-items:center}
-    .svg-wrap{background:linear-gradient(180deg,rgba(255,255,255,0.015),transparent);padding:12px;border-radius:12px}
-    svg{display:block;max-width:100%;height:auto}
-    .info{display:flex;gap:12px;align-items:center;justify-content:center}
-    .big{font-size:20px;font-weight:600}
-    .muted{color:var(--muted)}
-    .footer{margin-top:12px;text-align:center;color:var(--muted);font-size:12px}
-    .time{font-weight:700}
-    @media (max-width:880px){.layout{grid-template-columns:1fr}}  
-  </style>
+<meta charset="UTF-8">
+<title>Dots and Boxes Improved</title>
+<style>
+  body {
+    background: #111;
+    color: white;
+    font-family: sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  svg {
+    background: #222;
+    border-radius: 10px;
+    margin-top: 20px;
+    cursor: pointer;
+  }
+  .dot {
+    fill: white;
+  }
+  .edge {
+    stroke-width: 4;
+    stroke: rgba(255,255,255,0.06);
+    transition: stroke 0.15s;
+  }
+  .box {
+    fill-opacity: 0.3;
+  }
+  :root {
+    --p1: rgb(124, 58, 237);
+    --p2: rgb(239, 68, 68);
+    --preview-p1: rgba(124, 58, 237, 0.5);
+    --preview-p2: rgba(239, 68, 68, 0.5);
+  }
+</style>
 </head>
 <body>
-  <div class="app">
-    <header>
-      <h1>Dots &amp; Boxes — Single HTML file</h1>
-      <div class="controls">
-        <label class="muted">Grid:</label>
-        <select id="gridSize">
-          <option value="4">4×4 boxes (5×5 dots)</option>
-          <option value="3">3×3 boxes (4×4 dots)</option>
-          <option value="5" selected>5×5 boxes (6×6 dots)</option>
-        </select>
-        <label class="muted">Timer:</label>
-        <select id="timeSelect">
-          <option value="0">No timer</option>
-          <option value="60">1 min</option>
-          <option value="180">3 min</option>
-          <option value="300">5 min</option>
-        </select>
-        <button id="newGameBtn">New Game</button>
-      </div>
-    </header>
 
-    <div class="layout">
-      <div class="panel">
-        <div class="status">
-          <div id="p1" class="player turn">
-            <div class="dot" style="background:var(--p1)"></div>
-            <div>
-              <div>Player 1</div>
-              <div class="muted">Score: <span id="score1">0</span></div>
-            </div>
-            <div style="margin-left:auto;text-align:right">
-              <div class="muted">Time left</div>
-              <div class="time" id="time1">--:--</div>
-            </div>
-          </div>
+<h1>Dots and Boxes</h1>
+<div id="score"></div>
+<div id="board"></div>
 
-          <div id="p2" class="player">
-            <div class="dot" style="background:var(--p2)"></div>
-            <div>
-              <div>Player 2</div>
-              <div class="muted">Score: <span id="score2">0</span></div>
-            </div>
-            <div style="margin-left:auto;text-align:right">
-              <div class="muted">Time left</div>
-              <div class="time" id="time2">--:--</div>
-            </div>
-          </div>
+<script>
+const Ndots = 5; // grid size
+let state = {
+  h: {}, // horizontal edges
+  v: {}, // vertical edges
+  boxes: {},
+  turn: 0, // 0 = P1, 1 = P2
+  score: [0, 0]
+};
+let paused = false;
+let previewedEdge = null;
 
-          <div class="info">
-            <div class="big">Turn: <span id="turnLabel">P1</span></div>
-            <div class="muted">Boxes left: <span id="boxesLeft">0</span></div>
-            <div id="message" class="muted"></div>
-          </div>
+function hk(r, c) { return `h_${r}_${c}`; }
+function vk(r, c) { return `v_${r}_${c}`; }
+function bk(r, c) { return `b_${r}_${c}`; }
 
-          <div style="display:flex;gap:8px;margin-top:12px;justify-content:center">
-            <button id="pauseBtn">Pause</button>
-            <button id="resumeBtn" style="display:none">Resume</button>
-            <button id="resetBtn">Reset Scores</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="panel board-wrap">
-        <div class="svg-wrap" id="svgWrap"></div>
-        <div class="footer">Click an edge to claim it. Closing a box grants you another move. If timer is on, running out of time means you lose.</div>
-      </div>
-    </div>
-  </div>
-
-  <script>
-  (function(){
-    // Game state
-    let Ndots = 6; // default (6x6 dots => 5x5 boxes)
-    let boxesR = Ndots-1;
-
-    const gridSizeInput = document.getElementById('gridSize');
-    const timeSelect = document.getElementById('timeSelect');
-    const newGameBtn = document.getElementById('newGameBtn');
-    const svgWrap = document.getElementById('svgWrap');
-    const score1El = document.getElementById('score1');
-    const score2El = document.getElementById('score2');
-    const boxesLeftEl = document.getElementById('boxesLeft');
-    const turnLabel = document.getElementById('turnLabel');
-    const p1Panel = document.getElementById('p1');
-    const p2Panel = document.getElementById('p2');
-    const messageEl = document.getElementById('message');
-    const pauseBtn = document.getElementById('pauseBtn');
-    const resumeBtn = document.getElementById('resumeBtn');
-    const resetBtn = document.getElementById('resetBtn');
-    const time1El = document.getElementById('time1');
-    const time2El = document.getElementById('time2');
-
-    let state = {h:{}, v:{}, boxOwner: {}, scores:[0,0], turn:0};
-    let totalBoxes = 0;
-
-    // Timer state
-    let timerEnabled = false;
-    let initialSeconds = 0;
-    let times = [0,0]; // seconds left
-    let timerInterval = null;
-    let paused = false;
-
-    function formatTime(s){
-      if(s<=0) return '00:00';
-      const m = Math.floor(s/60); const sec = s%60;
-      return String(m).padStart(2,'0') + ':' + String(sec).padStart(2,'0');
+function initState() {
+  for (let r = 0; r < Ndots; r++) {
+    for (let c = 0; c < Ndots-1; c++) {
+      state.h[hk(r, c)] = null;
     }
-
-    function startTimers(){
-      if(timerInterval) clearInterval(timerInterval);
-      if(!timerEnabled) return;
-      timerInterval = setInterval(()=>{
-        if(paused) return;
-        times[state.turn]--;
-        updateTimerDisplays();
-        if(times[state.turn] <= 0){
-          clearInterval(timerInterval);
-          messageEl.textContent = 'Player ' + (state.turn+1) + ' ran out of time — Player ' + (2-state.turn) + ' wins!';
-          endGame(1-state.turn, 'time');
-        }
-      }, 1000);
+  }
+  for (let r = 0; r < Ndots-1; r++) {
+    for (let c = 0; c < Ndots; c++) {
+      state.v[vk(r, c)] = null;
     }
-
-    function updateTimerDisplays(){
-      time1El.textContent = formatTime(times[0]);
-      time2El.textContent = formatTime(times[1]);
+  }
+  for (let r = 0; r < Ndots-1; r++) {
+    for (let c = 0; c < Ndots-1; c++) {
+      state.boxes[bk(r, c)] = null;
     }
+  }
+}
+initState();
 
-    function stopTimers(){ if(timerInterval){ clearInterval(timerInterval); timerInterval=null; } }
+function renderBoard() {
+  const spacing = 60;
+  const dotR = 6;
+  const W = spacing * (Ndots - 1) + 48;
+  const H = W;
 
-    function setGridFromSelect(){
-      const boxes = parseInt(gridSizeInput.value,10);
-      Ndots = boxes + 1;
-      boxesR = boxes;
+  const svgNS = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(svgNS, "svg");
+  svg.setAttribute("width", W);
+  svg.setAttribute("height", H);
+
+  // edges (real clickable lines)
+  for (let r = 0; r < Ndots; r++) {
+    for (let c = 0; c < Ndots-1; c++) {
+      const x1 = 24 + c * spacing, y1 = 24 + r * spacing;
+      const x2 = x1 + spacing, y2 = y1;
+      const edge = document.createElementNS(svgNS, "line");
+      edge.setAttribute("x1", x1);
+      edge.setAttribute("y1", y1);
+      edge.setAttribute("x2", x2);
+      edge.setAttribute("y2", y2);
+      edge.setAttribute("class", "edge");
+      edge.dataset.id = hk(r, c);
+      svg.appendChild(edge);
     }
-
-    function newGame(){
-      setGridFromSelect();
-      // build state
-      state = {h:{}, v:{}, boxOwner: {}, scores:[0,0], turn:0};
-      totalBoxes = boxesR * boxesR;
-      for(let r=0;r<Ndots;r++){
-        for(let c=0;c<Ndots-1;c++) state.h[hk(r,c)] = null;
-      }
-      for(let r=0;r<Ndots-1;r++){
-        for(let c=0;c<Ndots;c++) state.v[vk(r,c)] = null;
-      }
-      for(let r=0;r<boxesR;r++) for(let c=0;c<boxesR;c++) state.boxOwner[boxk(r,c)] = null;
-      state.scores = [0,0];
-      state.turn = 0;
-      boxesLeftEl.textContent = totalBoxes;
-      score1El.textContent = 0; score2El.textContent = 0;
-      messageEl.textContent = '';
-
-      // Timer setup
-      timerEnabled = parseInt(timeSelect.value,10) > 0;
-      initialSeconds = parseInt(timeSelect.value,10) || 0;
-      times[0] = initialSeconds; times[1] = initialSeconds;
-      updateTimerDisplays();
-      paused = false;
-      resumeBtn.style.display='none'; pauseBtn.style.display='inline-block';
-      stopTimers();
-      if(timerEnabled){ startTimers(); }
-
-      renderBoard();
-      renderTurnUI();
+  }
+  for (let r = 0; r < Ndots-1; r++) {
+    for (let c = 0; c < Ndots; c++) {
+      const x1 = 24 + c * spacing, y1 = 24 + r * spacing;
+      const x2 = x1, y2 = y1 + spacing;
+      const edge = document.createElementNS(svgNS, "line");
+      edge.setAttribute("x1", x1);
+      edge.setAttribute("y1", y1);
+      edge.setAttribute("x2", x2);
+      edge.setAttribute("y2", y2);
+      edge.setAttribute("class", "edge");
+      edge.dataset.id = vk(r, c);
+      svg.appendChild(edge);
     }
+  }
 
-    function hk(r,c){return 'h_'+r+'_'+c}
-    function vk(r,c){return 'v_'+r+'_'+c}
-    function boxk(r,c){return 'b_'+r+'_'+c}
-
-    function renderBoard(){
-      const padding = 24;
-      const dotGap = 60; // px
-      const W = padding*2 + dotGap*(Ndots-1);
-      const H = W;
-      const svgNS = 'http://www.w3.org/2000/svg';
-      const svg = document.createElementNS(svgNS,'svg');
-      svg.setAttribute('width', Math.min(W, Math.max(300, Math.floor(window.innerWidth*0.6))));
-      svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-      svg.style.maxWidth = '100%';
-
-      // background rect
-      const bg = document.createElementNS(svgNS,'rect');
-      bg.setAttribute('x',0); bg.setAttribute('y',0); bg.setAttribute('width',W); bg.setAttribute('height',H); bg.setAttribute('fill','transparent');
-      svg.appendChild(bg);
-
-      // draw potential edges (invisible clickable areas) and drawn edges
-      // Horizontal edges
-      for(let r=0;r<Ndots;r++){
-        for(let c=0;c<Ndots-1;c++){
-          const x1 = padding + c*dotGap; const y = padding + r*dotGap; const x2 = x1 + dotGap;
-          const id = hk(r,c);
-          // clickable thick transparent line
-          const clickLine = document.createElementNS(svgNS,'line');
-          clickLine.setAttribute('x1',x1); clickLine.setAttribute('y1',y); clickLine.setAttribute('x2',x2); clickLine.setAttribute('y2',y);
-          clickLine.setAttribute('stroke','transparent'); clickLine.setAttribute('stroke-width',20); clickLine.style.cursor='pointer';
-          clickLine.addEventListener('click', ()=>claimEdge('h',r,c));
-          svg.appendChild(clickLine);
-
-          // visible line (shows owner)
-          const showLine = document.createElementNS(svgNS,'line');
-          showLine.setAttribute('x1',x1); showLine.setAttribute('y1',y); showLine.setAttribute('x2',x2); showLine.setAttribute('y2',y);
-          showLine.setAttribute('stroke-linecap','round'); showLine.setAttribute('stroke-width',6);
-          const owner = state.h[id];
-          if(owner === null) { showLine.setAttribute('stroke','rgba(255,255,255,0.06)'); }
-          else { showLine.setAttribute('stroke', owner===0?getComputedStyle(document.documentElement).getPropertyValue('--p1') : getComputedStyle(document.documentElement).getPropertyValue('--p2')); }
-          showLine.setAttribute('data-id',id); showLine.classList.add('edge');
-          svg.appendChild(showLine);
-        }
-      }
-
-      // Vertical edges
-      for(let r=0;r<Ndots-1;r++){
-        for(let c=0;c<Ndots;c++){
-          const x = padding + c*dotGap; const y1 = padding + r*dotGap; const y2 = y1 + dotGap;
-          const id = vk(r,c);
-          const clickLine = document.createElementNS(svgNS,'line');
-          clickLine.setAttribute('x1',x); clickLine.setAttribute('y1',y1); clickLine.setAttribute('x2',x); clickLine.setAttribute('y2',y2);
-          clickLine.setAttribute('stroke','transparent'); clickLine.setAttribute('stroke-width',20); clickLine.style.cursor='pointer';
-          clickLine.addEventListener('click', ()=>claimEdge('v',r,c));
-          svg.appendChild(clickLine);
-
-          const showLine = document.createElementNS(svgNS,'line');
-          showLine.setAttribute('x1',x); showLine.setAttribute('y1',y1); showLine.setAttribute('x2',x); showLine.setAttribute('y2',y2);
-          showLine.setAttribute('stroke-linecap','round'); showLine.setAttribute('stroke-width',6);
-          const owner = state.v[id];
-          if(owner === null) { showLine.setAttribute('stroke','rgba(255,255,255,0.06)'); }
-          else { showLine.setAttribute('stroke', owner===0?getComputedStyle(document.documentElement).getPropertyValue('--p1') : getComputedStyle(document.documentElement).getPropertyValue('--p2')); }
-          showLine.setAttribute('data-id',id); showLine.classList.add('edge');
-          svg.appendChild(showLine);
-        }
-      }
-
-      // boxes (for showing owner fill)
-      for(let r=0;r<boxesR;r++){
-        for(let c=0;c<boxesR;c++){
-          const x = padding + c*dotGap + 6; const y = padding + r*dotGap + 6;
-          const w = dotGap - 12; const h= w;
-          const rect = document.createElementNS(svgNS,'rect');
-          rect.setAttribute('x',x); rect.setAttribute('y',y); rect.setAttribute('width',w); rect.setAttribute('height',h);
-          rect.setAttribute('rx',8); rect.setAttribute('fill','transparent'); rect.setAttribute('data-id',boxk(r,c)); rect.classList.add('box');
-          const owner = state.boxOwner[boxk(r,c)];
-          if(owner !== null){ rect.setAttribute('fill', owner===0?getComputedStyle(document.documentElement).getPropertyValue('--p1'):getComputedStyle(document.documentElement).getPropertyValue('--p2')); rect.setAttribute('opacity','0.2'); }
-          svg.appendChild(rect);
-
-          // letter if owned
-          if(owner !== null){
-            const txt = document.createElementNS(svgNS,'text');
-            txt.setAttribute('x', x + w/2); txt.setAttribute('y', y + h/2 + 6);
-            txt.setAttribute('text-anchor','middle'); txt.setAttribute('font-size',24); txt.setAttribute('fill','white'); txt.setAttribute('opacity',0.9);
-            txt.textContent = owner===0? '1' : '2';
-            svg.appendChild(txt);
-          }
-        }
-      }
-
-      // dots
-      for(let r=0;r<Ndots;r++){
-        for(let c=0;c<Ndots;c++){
-          const x = padding + c*dotGap; const y = padding + r*dotGap;
-          const circle = document.createElementNS(svgNS,'circle');
-          circle.setAttribute('cx',x); circle.setAttribute('cy',y); circle.setAttribute('r',6); circle.setAttribute('fill','#e6eef8');
-          svg.appendChild(circle);
-        }
-      }
-
-      svgWrap.innerHTML = '';
-      svgWrap.appendChild(svg);
-      attachEdgeStyles();
+  // boxes
+  for (let r = 0; r < Ndots-1; r++) {
+    for (let c = 0; c < Ndots-1; c++) {
+      const rect = document.createElementNS(svgNS, "rect");
+      rect.setAttribute("x", 24 + c * spacing);
+      rect.setAttribute("y", 24 + r * spacing);
+      rect.setAttribute("width", spacing);
+      rect.setAttribute("height", spacing);
+      rect.setAttribute("class", "box");
+      rect.dataset.id = bk(r, c);
+      rect.setAttribute("fill", "transparent");
+      svg.appendChild(rect);
     }
+  }
 
-    function attachEdgeStyles(){
-      // update stroke color for each edge element according to state
-      const edges = svgWrap.querySelectorAll('.edge');
-      edges.forEach(el =>{
-        const id = el.getAttribute('data-id');
-        let owner = null;
-        if(id && id.startsWith('h_')) owner = state.h[id];
-        if(id && id.startsWith('v_')) owner = state.v[id];
-        if(owner === null) el.setAttribute('stroke','rgba(255,255,255,0.06)');
-        else el.setAttribute('stroke', owner===0?getComputedStyle(document.documentElement).getPropertyValue('--p1'):getComputedStyle(document.documentElement).getPropertyValue('--p2'));
-      });
+  // dots
+  for (let r = 0; r < Ndots; r++) {
+    for (let c = 0; c < Ndots; c++) {
+      const cx = 24 + c * spacing, cy = 24 + r * spacing;
+      const dot = document.createElementNS(svgNS, "circle");
+      dot.setAttribute("cx", cx);
+      dot.setAttribute("cy", cy);
+      dot.setAttribute("r", dotR);
+      dot.setAttribute("class", "dot");
+      svg.appendChild(dot);
     }
+  }
 
-    function claimEdge(type,r,c){
-      if(paused) return;
-      let id = (type==='h')?hk(r,c):vk(r,c);
-      if(type==='h'){
-        if(state.h[id] !== null) return; state.h[id] = state.turn;
-      } else {
-        if(state.v[id] !== null) return; state.v[id] = state.turn;
-      }
+  svg.addEventListener("mousemove", (e) => {
+    const pt = svg.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
+    let closest = findClosestEdge(svgP.x, svgP.y);
+    if (closest) previewEdge(closest.type, closest.r, closest.c);
+    else clearPreview();
+  });
 
-      // update UI line color immediately
-      attachEdgeStyles();
+  svg.addEventListener("mouseleave", clearPreview);
+  svg.addEventListener("click", (e) => {
+    if (paused) return;
+    const pt = svg.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
+    let closest = findClosestEdge(svgP.x, svgP.y);
+    if (closest) claimEdge(closest.type, closest.r, closest.c);
+  });
 
-      // check boxes closed
-      const closed = checkClosedBoxesAround(type,r,c);
-      if(closed > 0){
-        // award boxes
-        state.scores[state.turn] += closed;
-        updateScores();
-        // boxesLeft update
-        totalBoxes -= closed; boxesLeftEl.textContent = totalBoxes;
-        // same player's turn again
-        messageEl.textContent = 'Nice! Player ' + (state.turn+1) + ' closed ' + closed + ' box' + (closed>1?'es':'') + '.';
-        renderBoard();
-        // check end
-        if(totalBoxes <= 0) { finishByScore(); }
-        // don't change turn
-      } else {
-        // switch turn
-        state.turn = 1 - state.turn;
-        renderTurnUI();
+  document.getElementById("board").innerHTML = "";
+  document.getElementById("board").appendChild(svg);
+  updateBoardGraphics();
+}
+
+function findClosestEdge(x, y) {
+  const spacing = 60;
+  let best = null;
+  let bestDist = 20; // tolerance
+  for (let r = 0; r < Ndots; r++) {
+    for (let c = 0; c < Ndots - 1; c++) {
+      const mx = 24 + c * spacing + spacing/2;
+      const my = 24 + r * spacing;
+      const dist = Math.hypot(x - mx, y - my);
+      if (dist < bestDist && state.h[hk(r, c)] === null) {
+        bestDist = dist;
+        best = { type: 'h', r, c };
       }
     }
-
-    function checkClosedBoxesAround(type,r,c){
-      // return number of newly closed boxes
-      let closed = 0;
-      const candidates = [];
-      if(type==='h'){
-        // horizontal edge at (r,c) is top edge of box r,c and bottom edge of box r-1,c
-        if(r < boxesR) candidates.push([r,c]);
-        if(r-1 >= 0) candidates.push([r-1,c]);
-      } else {
-        // vertical edge at (r,c) is left edge of box r,c and right edge of box r,c-1
-        if(c < boxesR) candidates.push([r,c]);
-        if(c-1 >= 0) candidates.push([r,c-1]);
+  }
+  for (let r = 0; r < Ndots - 1; r++) {
+    for (let c = 0; c < Ndots; c++) {
+      const mx = 24 + c * spacing;
+      const my = 24 + r * spacing + spacing/2;
+      const dist = Math.hypot(x - mx, y - my);
+      if (dist < bestDist && state.v[vk(r, c)] === null) {
+        bestDist = dist;
+        best = { type: 'v', r, c };
       }
-      candidates.forEach(([br,bc])=>{
-        if(state.boxOwner[boxk(br,bc)] !== null) return; // already owned
-        const top = state.h[hk(br,bc)];
-        const bottom = state.h[hk(br+1,bc)];
-        const left = state.v[vk(br,bc)];
-        const right = state.v[vk(br,bc+1)];
-        if(top !== null && bottom !== null && left !== null && right !== null){
-          state.boxOwner[boxk(br,bc)] = state.turn;
-          closed++;
-        }
-      });
-      return closed;
     }
+  }
+  return best;
+}
 
-    function finishByScore(){
-      const s1 = state.scores[0], s2 = state.scores[1];
-      if(s1 > s2) endGame(0,'score');
-      else if(s2 > s1) endGame(1,'score');
-      else messageEl.textContent = 'It\'s a tie!';
-      stopTimers();
+function previewEdge(type, r, c) {
+  clearPreview();
+  let id = (type === 'h') ? hk(r, c) : vk(r, c);
+  if ((type === 'h' && state.h[id] !== null) || (type === 'v' && state.v[id] !== null)) return;
+  const svg = document.querySelector("svg");
+  previewedEdge = svg.querySelector(`.edge[data-id="${id}"]`);
+  if (previewedEdge) {
+    previewedEdge.setAttribute("stroke",
+      state.turn === 0
+        ? getComputedStyle(document.documentElement).getPropertyValue("--preview-p1")
+        : getComputedStyle(document.documentElement).getPropertyValue("--preview-p2")
+    );
+  }
+}
+
+function clearPreview() {
+  if (previewedEdge) {
+    const id = previewedEdge.dataset.id;
+    let owner = null;
+    if (id.startsWith("h_")) owner = state.h[id];
+    if (id.startsWith("v_")) owner = state.v[id];
+    previewedEdge.setAttribute(
+      "stroke",
+      owner === null
+        ? "rgba(255,255,255,0.06)"
+        : owner === 0
+          ? getComputedStyle(document.documentElement).getPropertyValue("--p1")
+          : getComputedStyle(document.documentElement).getPropertyValue("--p2")
+    );
+    previewedEdge = null;
+  }
+}
+
+function claimEdge(type, r, c) {
+  let id = (type === 'h') ? hk(r, c) : vk(r, c);
+  if ((type === 'h' && state.h[id] !== null) || (type === 'v' && state.v[id] !== null)) return;
+  if (type === 'h') state.h[id] = state.turn;
+  else state.v[id] = state.turn;
+
+  let scored = checkForBoxes(type, r, c);
+  if (!scored) state.turn = 1 - state.turn;
+
+  updateBoardGraphics();
+}
+
+function checkForBoxes(type, r, c) {
+  let scored = false;
+  const adj = [];
+  if (type === 'h') {
+    if (r > 0) adj.push([r-1, c]);
+    if (r < Ndots-1) adj.push([r, c]);
+  } else {
+    if (c > 0) adj.push([r, c-1]);
+    if (c < Ndots-1) adj.push([r, c]);
+  }
+  adj.forEach(([br, bc]) => {
+    if (
+      state.h[hk(br, bc)] !== null &&
+      state.h[hk(br+1, bc)] !== null &&
+      state.v[vk(br, bc)] !== null &&
+      state.v[vk(br, bc+1)] !== null &&
+      state.boxes[bk(br, bc)] === null
+    ) {
+      state.boxes[bk(br, bc)] = state.turn;
+      state.score[state.turn]++;
+      scored = true;
     }
+  });
+  return scored;
+}
 
-    function endGame(winnerIndex, reason){
-      renderBoard();
-      messageEl.textContent = 'Game over. Player ' + (winnerIndex+1) + ' wins! (' + reason + ')';
-      stopTimers();
-      // lock by pausing
-      paused = true;
-      pauseBtn.style.display='none'; resumeBtn.style.display='inline-block';
-    }
+function updateBoardGraphics() {
+  const svg = document.querySelector("svg");
+  for (const id in state.h) {
+    const edge = svg.querySelector(`.edge[data-id="${id}"]`);
+    if (state.h[id] === null) edge.setAttribute("stroke", "rgba(255,255,255,0.06)");
+    else edge.setAttribute("stroke", state.h[id] === 0 ? "var(--p1)" : "var(--p2)");
+  }
+  for (const id in state.v) {
+    const edge = svg.querySelector(`.edge[data-id="${id}"]`);
+    if (state.v[id] === null) edge.setAttribute("stroke", "rgba(255,255,255,0.06)");
+    else edge.setAttribute("stroke", state.v[id] === 0 ? "var(--p1)" : "var(--p2)");
+  }
+  for (const id in state.boxes) {
+    const box = svg.querySelector(`.box[data-id="${id}"]`);
+    if (state.boxes[id] === null) box.setAttribute("fill", "transparent");
+    else box.setAttribute("fill", state.boxes[id] === 0 ? "var(--p1)" : "var(--p2)");
+  }
+  document.getElementById("score").innerText = `P1: ${state.score[0]}  P2: ${state.score[1]} — Turn: P${state.turn+1}`;
+}
 
-    function updateScores(){
-      score1El.textContent = state.scores[0]; score2El.textContent = state.scores[1];
-    }
+renderBoard();
+</script>
 
-    function renderTurnUI(){
-      turnLabel.textContent = 'P' + (state.turn+1);
-      if(state.turn===0){ p1Panel.classList.add('turn'); p2Panel.classList.remove('turn'); }
-      else { p2Panel.classList.add('turn'); p1Panel.classList.remove('turn'); }
-      // adjust timers: restart interval to count down current player's time
-      if(timerEnabled){ stopTimers(); startTimers(); }
-    }
-
-    // Controls
-    newGameBtn.addEventListener('click', ()=>{ newGame(); });
-    pauseBtn.addEventListener('click', ()=>{ paused = true; pauseBtn.style.display='none'; resumeBtn.style.display='inline-block'; messageEl.textContent='Paused'; });
-    resumeBtn.addEventListener('click', ()=>{ paused = false; resumeBtn.style.display='none'; pauseBtn.style.display='inline-block'; messageEl.textContent=''; });
-    resetBtn.addEventListener('click', ()=>{ if(confirm('Reset scores and start fresh?')) newGame(); });
-
-    // keyboard: R to restart
-    window.addEventListener('keydown',(e)=>{ if(e.key==='r' || e.key==='R') newGame(); });
-
-    // init
-    newGame();
-
-  })();
-  </script>
 </body>
 </html>
