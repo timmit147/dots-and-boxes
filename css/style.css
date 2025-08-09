@@ -110,3 +110,8 @@ body{
     border-bottom: 2px solid #6bca57;
     padding-bottom: 4px;
 }
+
+#timer-container {
+    text-align: left;
+    padding: 20px;
+}

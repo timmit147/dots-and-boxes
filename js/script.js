@@ -51,6 +51,7 @@ let displayName = null;
 let timerInterval = null;
 let timerSeconds = 15;
 let timerActive = false;
+let gameEnded = false; // New variable to track if the game has ended
 
 // --- Board Rendering Logic ---
 function setGridLayout() {
@@ -386,47 +387,8 @@ leaveGameButton.addEventListener('click', () => {
 });
 
 board.addEventListener('click', (event) => {
-    const el = event.target;
-    const index = getBoxIndex(el);
+    if (gameEnded) return; // Prevent moves after game ends
 
-    if (index === -1 || clickedBoxes.has(el) || currentUser.uid !== currentPlayerId) {
-        return;
-    }
-
-    const currentPlayerClass = (players.indexOf(currentUser.uid) === 0) ? 'player_1' : 'player_2';
-    
-    let nextBoardState = [...boardState];
-    nextBoardState[index] = currentPlayerClass;
-
-    const row = Math.floor(index / cols);
-    const col = index % cols;
-
-    getNeighbors(row, col).forEach(nb => {
-        const neighborIndex = getBoxIndex(nb);
-        if (nextBoardState[neighborIndex] === null) {
-            const unclickedCount = countUnclickedNeighbors(nb, el, nextBoardState);
-            
-            if (unclickedCount === 0) {
-                nextBoardState[neighborIndex] = currentPlayerClass;
-            } else if (unclickedCount === 1) {
-                nextBoardState = findAndFillChain(nb, el, currentPlayerClass, nextBoardState);
-            }
-        }
-    });
-
-    const currentPlayerIndex = players.indexOf(currentUser.uid);
-    const nextPlayerIndex = (currentPlayerIndex + 1) % players.length;
-    const nextPlayerId = players[nextPlayerIndex];
-
-    const gameRef = doc(db, 'games', currentGameId);
-    updateDoc(gameRef, {
-        boardState: nextBoardState,
-        currentPlayer: nextPlayerId
-    });
-});
-
-// Stop timer when user clicks a square
-board.addEventListener('click', (event) => {
     if (timerActive) {
         clearInterval(timerInterval);
         timerActive = false;
@@ -459,6 +421,66 @@ board.addEventListener('click', (event) => {
             }
         }
     });
+
+    // Check if game should end
+    if (nextBoardState.every(cell => cell !== null)) {
+        endGame(nextBoardState);
+        return;
+    }
+
+    const currentPlayerIndex = players.indexOf(currentUser.uid);
+    const nextPlayerIndex = (currentPlayerIndex + 1) % players.length;
+    const nextPlayerId = players[nextPlayerIndex];
+
+    const gameRef = doc(db, 'games', currentGameId);
+    updateDoc(gameRef, {
+        boardState: nextBoardState,
+        currentPlayer: nextPlayerId
+    });
+});
+
+// Stop timer when user clicks a square
+board.addEventListener('click', (event) => {
+    if (gameEnded) return; // Prevent moves after game ends
+
+    if (timerActive) {
+        clearInterval(timerInterval);
+        timerActive = false;
+        updateTimerDisplay();
+    }
+    const el = event.target;
+    const index = getBoxIndex(el);
+
+    if (index === -1 || clickedBoxes.has(el) || currentUser.uid !== currentPlayerId) {
+        return;
+    }
+
+    const currentPlayerClass = (players.indexOf(currentUser.uid) === 0) ? 'player_1' : 'player_2';
+    
+    let nextBoardState = [...boardState];
+    nextBoardState[index] = currentPlayerClass;
+
+    const row = Math.floor(index / cols);
+    const col = index % cols;
+
+    getNeighbors(row, col).forEach(nb => {
+        const neighborIndex = getBoxIndex(nb);
+        if (nextBoardState[neighborIndex] === null) {
+            const unclickedCount = countUnclickedNeighbors(nb, el, nextBoardState);
+            
+            if (unclickedCount === 0) {
+                nextBoardState[neighborIndex] = currentPlayerClass;
+            } else if (unclickedCount === 1) {
+                nextBoardState = findAndFillChain(nb, el, currentPlayerClass, nextBoardState);
+            }
+        }
+    });
+
+    // Check if game should end
+    if (nextBoardState.every(cell => cell !== null)) {
+        endGame(nextBoardState);
+        return;
+    }
 
     const currentPlayerIndex = players.indexOf(currentUser.uid);
     const nextPlayerIndex = (currentPlayerIndex + 1) % players.length;
