@@ -330,63 +330,135 @@ startGameButton.addEventListener('click', async () => {
         return;
     }
 
-    // Disable button to prevent multiple clicks
     startGameButton.disabled = true;
     lobbyStatus.textContent = "Waiting for opponent...";
 
     const matchesRef = collection(db, 'matches');
-    const myMatchRef = doc(matchesRef, currentUser.uid);
     const timestamp = Date.now();
 
     try {
-        // First, try to join an existing game
+        // Try to find an existing waiting player
         const availableMatches = await getDocs(query(
             matchesRef,
-            where('timestamp', '<', timestamp),
-            where('timestamp', '>', timestamp - 30000), // Only matches from last 30 seconds
+            where('status', '==', 'waiting'),
+            orderBy('timestamp', 'asc'),
             limit(1)
         ));
 
-        let matched = false;
-        for (const matchDoc of availableMatches.docs) {
-            const matchData = matchDoc.data();
-            if (matchData.uid !== currentUser.uid && !matchData.matched) {
-                // Found a match, try to claim it
-                try {
-                    await updateDoc(matchDoc.ref, { matched: true });
-                    matched = true;
-                    // Create game with the found opponent
-                    const opponentUid = matchData.uid;
-                    const gameId = `${Math.min(currentUser.uid, opponentUid)}-${Math.max(currentUser.uid, opponentUid)}-${timestamp}`;
-                    await createGame(gameId, currentUser.uid, opponentUid);
-                    break;
-                } catch (e) {
-                    console.log('Match already taken, continuing search...');
-                }
-            }
-        }
+        if (!availableMatches.empty && availableMatches.docs[0].data().uid !== currentUser.uid) {
+            // Found a waiting player - join their game
+            const waitingPlayer = availableMatches.docs[0];
+            const waitingPlayerId = waitingPlayer.data().uid;
+            
+            try {
+                // Try to claim this match
+                await updateDoc(waitingPlayer.ref, { 
+                    status: 'matched',
+                    matchedWith: currentUser.uid
+                });
 
-        if (!matched) {
-            // If no match found, add yourself to the pool
-            await setDoc(myMatchRef, { 
-                uid: currentUser.uid, 
+                // Generate game ID and create the game
+                const gameId = `game-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                const gameRef = doc(db, 'games', gameId);
+
+                // Set up player names
+                const myName = currentUser.isAnonymous
+                    ? "Guest" + Math.floor(1000 + Math.random() * 9000)
+                    : currentUser.email.split('@')[0];
+
+                const opponentName = "Guest" + Math.floor(1000 + Math.random() * 9000);
+
+                // Create the game
+                await setDoc(gameRef, {
+                    players: [waitingPlayerId, currentUser.uid],
+                    playerNames: { 
+                        [waitingPlayerId]: opponentName,
+                        [currentUser.uid]: myName 
+                    },
+                    status: 'playing',
+                    boardState: Array(100).fill(null),
+                    currentPlayer: waitingPlayerId,
+                    timerSeconds: 15
+                });
+
+                // Clean up the match document
+                await deleteDoc(waitingPlayer.ref);
+
+                // Join the game
+                currentGameId = gameId;
+                joinGame(gameId);
+            } catch (e) {
+                console.error('Failed to join match:', e);
+                startGameButton.disabled = false;
+                lobbyStatus.textContent = "Failed to join game. Please try again.";
+            }
+        } else {
+            // No available match, create a new one
+            const myMatchRef = doc(matchesRef);
+            await setDoc(myMatchRef, {
+                uid: currentUser.uid,
                 timestamp: timestamp,
-                matched: false 
+                status: 'waiting'
             });
 
-            // Listen for someone matching with you
-            const unsubscribe = onSnapshot(myMatchRef, async (docSnap) => {
-                if (docSnap.exists() && docSnap.data().matched) {
-                    const matches = await getDocs(query(
-                        matchesRef,
-                        where('timestamp', '>', timestamp),
-                        where('matched', '==', true),
-                        limit(1)
-                    ));
+            // Listen for someone joining our game
+            const unsubscribe = onSnapshot(myMatchRef, async (doc) => {
+                if (doc.exists() && doc.data().status === 'matched') {
+                    const matchData = doc.data();
+                    const opponentUid = matchData.matchedWith;
+                    const gameId = `game-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
                     
-                    if (!matches.empty) {
-                        const matchData = matches.docs[0].data();
-                        const opponentUid = matchData.uid;
+                    // Create the game
+                    const gameRef = doc(db, 'games', gameId);
+                    const myName = currentUser.isAnonymous
+                        ? "Guest" + Math.floor(1000 + Math.random() * 9000)
+                        : currentUser.email.split('@')[0];
+
+                    const opponentName = "Guest" + Math.floor(1000 + Math.random() * 9000);
+
+                    await setDoc(gameRef, {
+                        players: [currentUser.uid, opponentUid],
+                        playerNames: {
+                            [currentUser.uid]: myName,
+                            [opponentUid]: opponentName
+                        },
+                        status: 'playing',
+                        boardState: Array(100).fill(null),
+                        currentPlayer: currentUser.uid,
+                        timerSeconds: 15
+                    });
+
+                    // Clean up
+                    await deleteDoc(myMatchRef);
+                    unsubscribe();
+
+                    // Join the game
+                    currentGameId = gameId;
+                    joinGame(gameId);
+                }
+            });
+
+            // Set a timeout to clean up if no one joins
+            setTimeout(async () => {
+                try {
+                    const docSnap = await getDoc(myMatchRef);
+                    if (docSnap.exists() && docSnap.data().status === 'waiting') {
+                        await deleteDoc(myMatchRef);
+                        unsubscribe();
+                        startGameButton.disabled = false;
+                        lobbyStatus.textContent = "No opponent found. Try again.";
+                    }
+                } catch (e) {
+                    console.error('Cleanup error:', e);
+                }
+            }, 30000);
+        }
+    } catch (error) {
+        console.error('Matchmaking error:', error);
+        startGameButton.disabled = false;
+        lobbyStatus.textContent = "Error finding opponent. Please try again.";
+    }
+});
 
             // Only the player with the lowest UID creates the game
             const gameId = bothUids.join('-');
