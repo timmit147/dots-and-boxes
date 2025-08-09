@@ -549,13 +549,15 @@ function endGame(finalBoardState, isTimeout = false) {
     }
 }
 
+const startGameButton = document.getElementById('start-game-button');
+
 startGameButton.addEventListener('click', async () => {
     if (!currentUser) {
         lobbyStatus.textContent = "Please sign in first.";
         return;
     }
 
-    // Look for an open game (status: 'waiting', 1 player)
+    // Look for an open game
     const gamesQuery = query(
         collection(db, 'games'),
         where('status', '==', 'waiting')
@@ -563,10 +565,9 @@ startGameButton.addEventListener('click', async () => {
     const querySnapshot = await getDocs(gamesQuery);
 
     let joined = false;
-    querySnapshot.forEach(async (gameDoc) => {
+    for (const gameDoc of querySnapshot.docs) {
         const gameData = gameDoc.data();
         if (gameData.players.length === 1 && !gameData.players.includes(currentUser.uid)) {
-            // Join this game
             let name = currentUser.isAnonymous
                 ? "Guest" + Math.floor(1000 + Math.random() * 9000)
                 : currentUser.email.split('@')[0];
@@ -580,8 +581,9 @@ startGameButton.addEventListener('click', async () => {
             currentGameId = gameDoc.id;
             joinGame(gameDoc.id);
             joined = true;
+            break;
         }
-    });
+    }
 
     if (!joined) {
         // No open game found, create a new one
