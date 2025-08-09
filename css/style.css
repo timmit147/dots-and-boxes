@@ -1,5 +1,5 @@
 body{
-    background-color:#9bd1f7;
+    background-color:#252525;
     margin: 0;
     display: flex;
     align-items: center;
@@ -19,17 +19,37 @@ body{
 
 #game-lobby-container {
         flex-direction: column;
-    gap: 10px;
+    gap: 20px;
     height: 100%;
     justify-content: center;
+    color: white;
+}
+
+
+button{
+    padding: 10px;
+    background-color: white;
+    border: 0;
+    font-weight: 700;
+    color: #252525;
+}
+
+input{
+    padding: 10px;
+    background-color: white;
+    border: 0;
+    font-weight: 700;
+    color: #252525;
+    text-align-last: center;
 }
 
 #auth-container {
-    gap: 10px;
+    gap: 20px;
     flex-direction: column;
     height: 100%;
     justify-content: center;
     display: flex;
+    color: white;
 }
 
 .game-layout {
@@ -55,10 +75,21 @@ body{
     display: grid;
     grid-gap: 0;
     margin: auto;
+    max-width: 400px;
 }
 
 #timer-container{
     padding: 20px;
+    padding-bottom: 0;
+    color: white;
+}
+
+#leave-game-button {
+    background-image: url(/assets/angle.svg);
+    height: 15px;
+    aspect-ratio: 1;
+    background-color: unset;
+    border: 0;
 }
 
 #player-names-container {
@@ -69,17 +100,19 @@ body{
 }
 
 .box{
-    background-color:white;
+    background-color:#7C7C7C;
 }
 
 .even{
-    background-color:#9bd1f7;
+    background-color:#252525;
 }
 
 .player_1{
-    background-color:#ea5454;
+    background-color:#EF2828;
+    padding: 5px;
 }
 
 .player_2{
-    background-color:#6bca57;
+    background-color:#126EBE;
+    padding: 5px;
 }
