@@ -463,42 +463,53 @@ startGameButton.addEventListener('click', async () => {
         return;
     }
 
-    // Look for an open game
-    const gamesQuery = query(
-        collection(db, 'games'),
-        where('status', '==', 'waiting')
-    );
-    const querySnapshot = await getDocs(gamesQuery);
+    lobbyStatus.textContent = "Searching for open games...";
 
     let joined = false;
-    for (const gameDoc of querySnapshot.docs) {
-        const gameData = gameDoc.data();
-        if (gameData.players.length === 1 && !gameData.players.includes(currentUser.uid)) {
-            let name = currentUser.isAnonymous
-                ? "Guest" + Math.floor(1000 + Math.random() * 9000)
-                : currentUser.email.split('@')[0];
+    let searchStart = Date.now();
+    let name = currentUser.isAnonymous
+        ? "Guest" + Math.floor(1000 + Math.random() * 9000)
+        : currentUser.email.split('@')[0];
 
-            await updateDoc(gameDoc.ref, {
-                players: [...gameData.players, currentUser.uid],
-                playerNames: { ...gameData.playerNames, [currentUser.uid]: name },
-                status: 'playing',
-                currentPlayer: gameData.players[0]
-            });
-            currentGameId = gameDoc.id;
-            joinGame(gameDoc.id);
-            joined = true;
-            break;
+    // Try to join an open game for up to 5 seconds
+    while (Date.now() - searchStart < 5000 && !joined) {
+        const gamesQuery = query(
+            collection(db, 'games'),
+            where('status', '==', 'waiting')
+        );
+        const querySnapshot = await getDocs(gamesQuery);
+
+        for (const gameDoc of querySnapshot.docs) {
+            const gameData = gameDoc.data();
+            if (
+                Array.isArray(gameData.players) &&
+                gameData.players.length === 1 &&
+                gameData.players[0] !== currentUser.uid
+            ) {
+                await updateDoc(gameDoc.ref, {
+                    players: [...gameData.players, currentUser.uid],
+                    playerNames: { ...gameData.playerNames, [currentUser.uid]: name },
+                    status: 'playing',
+                    currentPlayer: gameData.players[0]
+                });
+                currentGameId = gameDoc.id;
+                joinGame(gameDoc.id);
+                joined = true;
+                break;
+            }
+        }
+
+        if (!joined) {
+            // Wait 500ms before checking again
+            await new Promise(res => setTimeout(res, 500));
         }
     }
 
     if (!joined) {
-        // No open game found, create a new one
+        // No open game found after 5 seconds, create a new one
+        lobbyStatus.textContent = "No open games found. Creating a new game...";
         const gameId = Math.floor(100000 + Math.random() * 900000).toString();
         const gameRef = doc(db, 'games', gameId);
-
-        let name = currentUser.isAnonymous
-            ? "Guest" + Math.floor(1000 + Math.random() * 9000)
-            : currentUser.email.split('@')[0];
 
         await setDoc(gameRef, {
             players: [currentUser.uid],
