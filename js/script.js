@@ -254,8 +254,15 @@ createGameButton.addEventListener('click', async () => {
     // Generate a 6-digit numeric game ID
     const gameId = Math.floor(100000 + Math.random() * 900000).toString();
     const gameRef = doc(db, 'games', gameId);
+
+    // Get display name
+    let name = currentUser.isAnonymous
+        ? "Guest" + Math.floor(1000 + Math.random() * 9000)
+        : currentUser.email.split('@')[0];
+
     await setDoc(gameRef, {
         players: [currentUser.uid],
+        playerNames: { [currentUser.uid]: name },
         status: 'waiting',
         boardState: Array(100).fill(null)
     });
