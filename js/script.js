@@ -251,7 +251,8 @@ createGameButton.addEventListener('click', async () => {
         lobbyStatus.textContent = "Please sign in first.";
         return;
     }
-    const gameId = Math.random().toString(36).substring(2, 8);
+    // Generate a 6-digit numeric game ID
+    const gameId = Math.floor(100000 + Math.random() * 900000).toString();
     const gameRef = doc(db, 'games', gameId);
     await setDoc(gameRef, {
         players: [currentUser.uid],
