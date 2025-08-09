@@ -285,7 +285,7 @@ leaveGameButton.addEventListener('click', () => {
 });
 
 board.addEventListener('click', (event) => {
-    // Prevent double moves: only allow click if not waiting for Firestore update
+    // Only allow click if it's your turn and timer is active
     if (timerActive && currentUser.uid === currentPlayerId) {
         const el = event.target;
         const index = getBoxIndex(el);
@@ -297,6 +297,7 @@ board.addEventListener('click', (event) => {
         timerActive = false;
         clearInterval(timerInterval);
 
+        // Calculate next board state (do not render locally)
         const currentPlayerClass = (players.indexOf(currentUser.uid) === 0) ? 'player_1' : 'player_2';
         let nextBoardState = [...boardState];
         nextBoardState[index] = currentPlayerClass;
@@ -321,6 +322,7 @@ board.addEventListener('click', (event) => {
         const nextPlayerId = players[nextPlayerIndex];
 
         const gameRef = doc(db, 'games', currentGameId);
+        // Only update Firestore, do not render locally
         updateDoc(gameRef, {
             boardState: nextBoardState,
             currentPlayer: nextPlayerId,
