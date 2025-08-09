@@ -395,7 +395,8 @@ startGameButton.addEventListener('click', async () => {
             }
         } else {
             // No available match, create a new one
-            const myMatchRef = doc(matchesRef);
+            const myMatchId = `${currentUser.uid}-${timestamp}`;
+            const myMatchRef = doc(db, 'matches', myMatchId);
             await setDoc(myMatchRef, {
                 uid: currentUser.uid,
                 timestamp: timestamp,
