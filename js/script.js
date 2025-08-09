@@ -347,7 +347,6 @@ joinGameButton.addEventListener('click', async () => {
 
 function joinGame(gameId) {
     gameLobbyContainer.style.display = 'none';
-    // The main change: Show the game container
     gameContainer.style.display = 'flex'; 
     currentGameIdSpan.textContent = gameId;
     setGridLayout();
@@ -364,16 +363,17 @@ function joinGame(gameId) {
             
             renderBoard(boardState);
 
-            // New: Update player names display
-            playerNamesContainer.innerHTML = '';
-            gameData.players.forEach((playerId, index) => {
-                const playerName = (playerId === currentUser.uid) ? `You (Player ${index + 1})` : `Opponent (Player ${index + 1})`;
-                const div = document.createElement('div');
-                div.textContent = playerName;
-                playerNamesContainer.appendChild(div);
-            });
+            // Use only this:
+            renderPlayerNames(players, gameData.playerNames);
 
-            renderPlayerNames(players, gameData.playerNames); // Call the new function here
+            // Show timer only if it's your turn
+            if (currentUser && currentUser.uid === currentPlayerId) {
+                startTurnTimer();
+            } else {
+                clearInterval(timerInterval);
+                timerActive = false;
+                updateTimerDisplay();
+            }
         }
     });
 }
@@ -382,7 +382,6 @@ leaveGameButton.addEventListener('click', () => {
     if (unsubscribeFromGame) unsubscribeFromGame();
     currentGameId = null;
     gameLobbyContainer.style.display = 'flex';
-    // The main change: Hide the game container
     gameContainer.style.display = 'none';
 });
 
