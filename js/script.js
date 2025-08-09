@@ -543,16 +543,10 @@ function joinGame(gameId) {
                 return;
             }
 
-            // Show timer for everyone, always use Firestore value
-            updateTimerDisplay();
+            // Always start local timer for both clients
+            startLocalTimer(timerSeconds);
 
-            // Only start local timer if it's your turn and game not ended
-            if (!gameEnded && currentUser && currentUser.uid === currentPlayerId && !timerActive) {
-                startTurnTimer();
-            } else {
-                clearInterval(timerInterval);
-                timerActive = false;
-            }
+            updateTimerDisplay();
         }
     });
 }
