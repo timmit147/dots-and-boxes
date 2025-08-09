@@ -110,10 +110,13 @@ function renderPlayerNames(players, playerNames) {
     players.forEach((uid, idx) => {
         const playerClass = idx === 0 ? 'player_1' : 'player_2';
         const score = boardState.filter(cell => cell === playerClass).length;
-        const name = playerNames && playerNames[uid] ? playerNames[uid] : `Player ${idx + 1}`;
+        let name = playerNames && playerNames[uid] ? playerNames[uid] : `Player ${idx + 1}`;
+        if (currentUser && currentUser.uid === uid) {
+            name = `(you) ${name}`;
+        }
 
         const span = document.createElement('span');
-        span.textContent = `${name} ${score}`; // Name before score
+        span.textContent = `${name} ${score}`;
         span.classList.add('player-name', playerClass);
 
         if (currentPlayerId === uid) {

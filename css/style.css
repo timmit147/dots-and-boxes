@@ -92,21 +92,21 @@ body{
 }
 
 .player-name.player_1 {
-    color: #6bca57; /* Green for player 1 */
+    color: #ea5454; /* Green for player 1 */
     background-color: unset;
 }
 
 .player-name.player_2 {
-    color: #d32f2f; /* Red for player 2 */
+    color: #6bca57; /* Red for player 2 */
     background-color: unset;
 }
 
 .player-name.player_1.your-turn {
-    border-bottom: 2px solid #6bca57;
+    border-bottom: 2px solid #ea5454;
     padding-bottom: 4px;
 }
 
 .player-name.player_2.your-turn {
-    border-bottom: 2px solid #d32f2f;
+    border-bottom: 2px solid #6bca57;
     padding-bottom: 4px;
 }
