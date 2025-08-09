@@ -1,7 +1,7 @@
 // Firebase configuration and initialization
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot, collection, deleteDoc, query, where, getDocs, orderBy, limit } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot, collection, deleteDoc } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyCQh3iNGIGDVaFTmiEGyZa6r5r7U0thX80",
@@ -205,8 +205,7 @@ function renderPlayerNames(players, playerNames) {
         playerDiv.className = `player player_${index + 1}`;
         const name = playerNames[playerId] || `Player ${index + 1}`;
         const isCurrentPlayer = playerId === currentPlayerId;
-        const isYou = playerId === currentUser?.uid;
-        playerDiv.innerHTML = `${name} ${isYou ? '(You)' : ''} ${isCurrentPlayer ? '- Your Turn!' : ''}`;
+        playerDiv.innerHTML = `${name}${isCurrentPlayer ? ' (Current Turn)' : ''}`;
         playerNamesContainer.appendChild(playerDiv);
     });
 }
@@ -285,58 +284,42 @@ leaveGameButton.addEventListener('click', () => {
 });
 
 board.addEventListener('click', (event) => {
-    // Only allow click if it's your turn and timer is active
-    if (timerActive && currentUser.uid === currentPlayerId) {
-        const el = event.target;
-        const index = getBoxIndex(el);
-        if (index === -1 || clickedBoxes.has(el)) {
-            return;
-        }
+    const el = event.target;
+    const index = getBoxIndex(el);
 
-        // Disable further clicks until Firestore confirms
-        timerActive = false;
-        clearInterval(timerInterval);
-
-        // Calculate next board state (do not render locally)
-        const currentPlayers = [...players];
-        const currentPlayerClass = (currentPlayers.indexOf(currentUser.uid) === 0) ? 'player_1' : 'player_2';
-        const currentPlayerIndex = currentPlayers.indexOf(currentUser.uid);
-        const nextPlayerIndex = (currentPlayerIndex + 1) % currentPlayers.length;
-        const nextPlayerId = currentPlayers[nextPlayerIndex];
-        let nextBoardState = [...boardState];
-        nextBoardState[index] = currentPlayerClass;
-
-        const row = Math.floor(index / cols);
-        const col = index % cols;
-
-        getNeighbors(row, col).forEach(nb => {
-            const neighborIndex = getBoxIndex(nb);
-            if (nextBoardState[neighborIndex] === null) {
-                const unclickedCount = countUnclickedNeighbors(nb, el, nextBoardState);
-                if (unclickedCount === 0) {
-                    nextBoardState[neighborIndex] = currentPlayerClass;
-                } else if (unclickedCount === 1) {
-                    nextBoardState = findAndFillChain(nb, el, currentPlayerClass, nextBoardState);
-                }
-            }
-        });
-
-        const gameRef = doc(db, 'games', currentGameId);
-        // Only update Firestore, do not render locally
-        updateDoc(gameRef, {
-            boardState: nextBoardState,
-            currentPlayer: nextPlayerId,
-            timerSeconds: 15, // <-- Reset timer for both players every turn
-            lastUpdate: Date.now() // Add timestamp for sync verification
-        }).catch(error => {
-            console.error('Failed to update game:', error);
-            // Re-enable clicks if update fails
-            if (currentUser.uid === currentPlayerId) {
-                timerActive = true;
-                startTurnTimer();
-            }
-        });
+    if (index === -1 || clickedBoxes.has(el) || currentUser.uid !== currentPlayerId) {
+        return;
     }
+
+    const currentPlayerClass = (players.indexOf(currentUser.uid) === 0) ? 'player_1' : 'player_2';
+    let nextBoardState = [...boardState];
+    nextBoardState[index] = currentPlayerClass;
+
+    const row = Math.floor(index / cols);
+    const col = index % cols;
+
+    getNeighbors(row, col).forEach(nb => {
+        const neighborIndex = getBoxIndex(nb);
+        if (nextBoardState[neighborIndex] === null) {
+            const unclickedCount = countUnclickedNeighbors(nb, el, nextBoardState);
+            if (unclickedCount === 0) {
+                nextBoardState[neighborIndex] = currentPlayerClass;
+            } else if (unclickedCount === 1) {
+                nextBoardState = findAndFillChain(nb, el, currentPlayerClass, nextBoardState);
+            }
+        }
+    });
+
+    const currentPlayerIndex = players.indexOf(currentUser.uid);
+    const nextPlayerIndex = (currentPlayerIndex + 1) % players.length;
+    const nextPlayerId = players[nextPlayerIndex];
+
+    const gameRef = doc(db, 'games', currentGameId);
+    updateDoc(gameRef, {
+        boardState: nextBoardState,
+        currentPlayer: nextPlayerId,
+        timerSeconds: 15 // <-- Reset timer for both players every turn
+    });
 });
 
 // New event listener for starting the game with an opponent
@@ -346,155 +329,63 @@ startGameButton.addEventListener('click', async () => {
         return;
     }
 
-    startGameButton.disabled = true;
     lobbyStatus.textContent = "Waiting for opponent...";
 
     const matchesRef = collection(db, 'matches');
-    const timestamp = Date.now();
+    const myMatchRef = doc(matchesRef, currentUser.uid);
 
-    try {
-        // Try to find an existing waiting player
-        const availableMatchesSnap = await getDocs(query(
-            matchesRef,
-            where('status', '==', 'waiting')
-        ));
-        // Sort by timestamp in JS and pick the first not yourself
-        const availableMatches = availableMatchesSnap.docs
-            .filter(doc => doc.data().uid !== currentUser.uid)
-            .sort((a, b) => a.data().timestamp - b.data().timestamp);
-        if (availableMatches.length > 0) {
-            // Found a waiting player - join their game
-            const waitingPlayer = availableMatches[0];
-            const waitingPlayerId = waitingPlayer.data().uid;
-            
-            try {
-                // Try to claim this match
-                await updateDoc(waitingPlayer.ref, { 
-                    status: 'matched',
-                    matchedWith: currentUser.uid
-                });
+    // Add yourself as waiting for a match
+    await setDoc(myMatchRef, { uid: currentUser.uid, timestamp: Date.now() });
 
-                // Generate game ID and create the game
-                const gameId = `game-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    // Listen for matches
+    const unsubscribe = onSnapshot(matchesRef, async (snapshot) => {
+        // Get all waiting players
+        const waitingPlayers = [];
+        snapshot.forEach(docSnap => {
+            waitingPlayers.push(docSnap.data().uid);
+        });
+
+        // Only proceed if there are at least 2 players waiting
+        if (waitingPlayers.length >= 2) {
+            // Sort UIDs to get a deterministic order
+            const bothUids = waitingPlayers.slice(0, 2).sort();
+            const opponentUid = bothUids.find(uid => uid !== currentUser.uid);
+
+            // Only the player with the lowest UID creates the game
+            const gameId = bothUids.join('-');
+            if (currentUser.uid === bothUids[0]) {
                 const gameRef = doc(db, 'games', gameId);
 
-                // Set up player names
                 const myName = currentUser.isAnonymous
                     ? "Guest" + Math.floor(1000 + Math.random() * 9000)
                     : currentUser.email.split('@')[0];
-
-                const opponentName = "Guest" + Math.floor(1000 + Math.random() * 9000);
-
-                // Create the game with sorted players array
-                const sortedPlayers = [waitingPlayerId, currentUser.uid].sort();
                 
-                // Before writing to Firestore, inspect the data
-                console.log("Data being written:", {
-                    players: sortedPlayers,
-                    playerNames: {
-                        [waitingPlayerId]: opponentName,
-                        [currentUser.uid]: myName
-                    },
-                    status: 'playing',
-                    boardState: Array(100).fill(null),
-                    currentPlayer: sortedPlayers[0],
-                    timerSeconds: 15,
-                    lastUpdate: Date.now()
-                });
+                const opponentDoc = await getDoc(doc(db, 'users', opponentUid));
+                const opponentName = opponentDoc.exists() 
+                    ? opponentDoc.data().name 
+                    : "Guest" + Math.floor(1000 + Math.random() * 9000);
 
                 await setDoc(gameRef, {
-                    players: sortedPlayers,
-                    playerNames: {
-                        [waitingPlayerId]: opponentName,
-                        [currentUser.uid]: myName
-                    },
+                    players: bothUids,
+                    playerNames: { [currentUser.uid]: myName, [opponentUid]: opponentName },
                     status: 'playing',
                     boardState: Array(100).fill(null),
-                    currentPlayer: sortedPlayers[0],
-                    timerSeconds: 15,
-                    lastUpdate: Date.now()
+                    currentPlayer: currentUser.uid,
+                    timerSeconds: 15
                 });
-
-                // Clean up the match document
-                await deleteDoc(waitingPlayer.ref);
-
-                // Join the game
-                currentGameId = gameId;
-                joinGame(gameId);
-            } catch (e) {
-                console.error('Failed to join match:', e);
-                startGameButton.disabled = false;
-                lobbyStatus.textContent = "Failed to join game. Please try again.";
             }
-        } else {
-            // No available match, create a new one
-            const myMatchId = `${currentUser.uid}-${timestamp}`;
-            const myMatchRef = doc(db, 'matches', myMatchId);
-            await setDoc(myMatchRef, {
-                uid: currentUser.uid,
-                timestamp: timestamp,
-                status: 'waiting'
-            });
 
-            // Listen for someone joining our game
-            const unsubscribe = onSnapshot(myMatchRef, async (matchSnap) => {
-                if (matchSnap.exists() && matchSnap.data().status === 'matched') {
-                    const matchData = matchSnap.data();
-                    const opponentUid = matchData.matchedWith;
-                    const gameId = `game-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-                    
-                    // Create the game
-                    const gameRef = doc(db, 'games', gameId);
-                    const myName = currentUser.isAnonymous
-                        ? "Guest" + Math.floor(1000 + Math.random() * 9000)
-                        : currentUser.email.split('@')[0];
+            // Remove both from matches
+            await deleteDoc(doc(matchesRef, bothUids[0]));
+            await deleteDoc(doc(matchesRef, bothUids[1]));
 
-                    const opponentName = "Guest" + Math.floor(1000 + Math.random() * 9000);
+            // Both players join the game
+            currentGameId = gameId;
+            joinGame(gameId);
 
-                    const sortedPlayers = [currentUser.uid, opponentUid].sort();
-                    await setDoc(gameRef, {
-                        players: sortedPlayers,
-                        playerNames: {
-                            [currentUser.uid]: myName,
-                            [opponentUid]: opponentName
-                        },
-                        status: 'playing',
-                        boardState: Array(100).fill(null),
-                        currentPlayer: sortedPlayers[0],
-                        timerSeconds: 15,
-                        lastUpdate: Date.now() // Add timestamp for sync verification
-                    });
-
-                    // Clean up
-                    await deleteDoc(myMatchRef);
-                    unsubscribe();
-
-                    // Join the game
-                    currentGameId = gameId;
-                    joinGame(gameId);
-                }
-            });
-
-            // Set a timeout to clean up if no one joins
-            setTimeout(async () => {
-                try {
-                    const docSnap = await getDoc(myMatchRef);
-                    if (docSnap.exists() && docSnap.data().status === 'waiting') {
-                        await deleteDoc(myMatchRef);
-                        unsubscribe();
-                        startGameButton.disabled = false;
-                        lobbyStatus.textContent = "No opponent found. Try again.";
-                    }
-                } catch (e) {
-                    console.error('Cleanup error:', e);
-                }
-            }, 30000);
+            unsubscribe(); // Stop listening
         }
-    } catch (error) {
-        console.error('Matchmaking error:', error);
-        startGameButton.disabled = false;
-        lobbyStatus.textContent = "Error finding opponent. Please try again.";
-    }
+    });
 });
 
 function joinGame(gameId) {
@@ -502,36 +393,23 @@ function joinGame(gameId) {
     gameContainer.style.display = 'flex';
     setGridLayout();
 
-    // Clear any existing game state
-    clearInterval(timerInterval);
-    timerActive = false;
-    gameEnded = false;
-    clickedBoxes.clear();
-    
     const gameRef = doc(db, 'games', gameId);
     if (unsubscribeFromGame) unsubscribeFromGame();
 
-    let lastPlayerId = null;
-    unsubscribeFromGame = onSnapshot(gameRef, async (docSnap) => {
+    unsubscribeFromGame = onSnapshot(gameRef, (docSnap) => {
         if (docSnap.exists()) {
             const gameData = docSnap.data();
-            // Always use Firestore data, never local state
-            boardState = [...gameData.boardState];
-            players = [...gameData.players].sort(); // Sort for consistency
+            boardState = gameData.boardState;
+            players = gameData.players;
+            currentPlayerId = gameData.currentPlayer;
             const playerNames = gameData.playerNames || {};
             timerSeconds = typeof gameData.timerSeconds === 'number' ? gameData.timerSeconds : 15;
-            const timerContainer = document.getElementById('timer-container');
-
-            // Detect turn change
-            const newPlayerId = gameData.currentPlayer;
-            const turnChanged = lastPlayerId !== newPlayerId;
-            currentPlayerId = newPlayerId;
-            lastPlayerId = newPlayerId;
 
             renderBoard(boardState);
             renderPlayerNames(players, playerNames);
 
             // Show winner message if game is ended
+            const timerContainer = document.getElementById('timer-container');
             if (gameData.status === 'ended') {
                 gameEnded = true;
                 clearInterval(timerInterval);
@@ -548,10 +426,7 @@ function joinGame(gameId) {
 
             // Only start timer if both players are present and game is playing
             if (players.length === 2 && gameData.status === 'playing') {
-                // Always clear and reset timer on turn change
-                clearInterval(timerInterval);
-                timerActive = false;
-                if (!gameEnded && currentUser && currentUser.uid === currentPlayerId) {
+                if (!gameEnded && currentUser && currentUser.uid === currentPlayerId && !timerActive) {
                     startTurnTimer();
                 }
                 updateTimerDisplay();
@@ -563,60 +438,3 @@ function joinGame(gameId) {
         }
     });
 }
-
-// Listen for game changes (call this after joining/creating a game)
-function listenToGame(gameId) {
-    const gameRef = doc(db, 'games', gameId);
-    if (unsubscribeFromGame) unsubscribeFromGame();
-    unsubscribeFromGame = onSnapshot(gameRef, (docSnap) => {
-        if (!docSnap.exists()) return;
-        const game = docSnap.data();
-        boardState = [...game.boardState];
-        players = [...game.players];
-        currentPlayerId = game.currentPlayer;
-        timerSeconds = game.timerSeconds;
-        renderBoard(boardState);
-        renderPlayerNames(players, game.playerNames || {});
-        updateTimerDisplay();
-
-        // Timer logic
-        clearInterval(timerInterval);
-        timerActive = false;
-        if (game.status === 'playing' && currentUser.uid === currentPlayerId) {
-            startTurnTimer();
-        }
-        if (game.status === 'ended') {
-            timerDisplay.textContent = game.winner
-                ? `${game.playerNames[game.winner] || 'Opponent'} wins!`
-                : "It's a draw!";
-        }
-    });
-}
-
-// Board click handler (only updates Firestore)
-board.addEventListener('click', (event) => {
-    if (!timerActive || currentUser.uid !== currentPlayerId) return;
-    const el = event.target;
-    const index = getBoxIndex(el);
-    if (index === -1 || clickedBoxes.has(el)) return;
-
-    // Calculate next board state
-    const currentPlayerClass = (players.indexOf(currentUser.uid) === 0) ? 'player_1' : 'player_2';
-    let nextBoardState = [...boardState];
-    nextBoardState[index] = currentPlayerClass;
-
-    // (Optional: fill chains, etc. as in your logic...)
-
-    // Switch turn
-    const nextPlayerIndex = (players.indexOf(currentUser.uid) + 1) % players.length;
-    const nextPlayerId = players[nextPlayerIndex];
-
-    // Update Firestore only
-    const gameRef = doc(db, 'games', currentGameId);
-    updateDoc(gameRef, {
-        boardState: nextBoardState,
-        currentPlayer: nextPlayerId,
-        timerSeconds: 15
-    });
-    // Do NOT update UI here—wait for Firestore snapshot!
-});
