@@ -109,9 +109,12 @@ function renderPlayerNames(players, playerNames) {
     container.innerHTML = '';
 
     players.forEach((uid, idx) => {
+        // Only show actual player names
         const playerClass = idx === 0 ? 'player_1' : 'player_2';
         const score = boardState.filter(cell => cell === playerClass).length;
-        let name = playerNames && playerNames[uid] ? playerNames[uid] : `Player ${idx + 1}`;
+        let name = playerNames && playerNames[uid] ? playerNames[uid] : '';
+        if (!name) return; // Skip if no name
+
         if (currentUser && currentUser.uid === uid) {
             name = `(you) ${name}`;
         }
