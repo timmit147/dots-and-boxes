@@ -285,42 +285,48 @@ leaveGameButton.addEventListener('click', () => {
 });
 
 board.addEventListener('click', (event) => {
-    const el = event.target;
-    const index = getBoxIndex(el);
-
-    if (index === -1 || clickedBoxes.has(el) || currentUser.uid !== currentPlayerId) {
-        return;
-    }
-
-    const currentPlayerClass = (players.indexOf(currentUser.uid) === 0) ? 'player_1' : 'player_2';
-    let nextBoardState = [...boardState];
-    nextBoardState[index] = currentPlayerClass;
-
-    const row = Math.floor(index / cols);
-    const col = index % cols;
-
-    getNeighbors(row, col).forEach(nb => {
-        const neighborIndex = getBoxIndex(nb);
-        if (nextBoardState[neighborIndex] === null) {
-            const unclickedCount = countUnclickedNeighbors(nb, el, nextBoardState);
-            if (unclickedCount === 0) {
-                nextBoardState[neighborIndex] = currentPlayerClass;
-            } else if (unclickedCount === 1) {
-                nextBoardState = findAndFillChain(nb, el, currentPlayerClass, nextBoardState);
-            }
+    // Prevent double moves: only allow click if not waiting for Firestore update
+    if (timerActive && currentUser.uid === currentPlayerId) {
+        const el = event.target;
+        const index = getBoxIndex(el);
+        if (index === -1 || clickedBoxes.has(el)) {
+            return;
         }
-    });
 
-    const currentPlayerIndex = players.indexOf(currentUser.uid);
-    const nextPlayerIndex = (currentPlayerIndex + 1) % players.length;
-    const nextPlayerId = players[nextPlayerIndex];
+        // Disable further clicks until Firestore confirms
+        timerActive = false;
+        clearInterval(timerInterval);
 
-    const gameRef = doc(db, 'games', currentGameId);
-    updateDoc(gameRef, {
-        boardState: nextBoardState,
-        currentPlayer: nextPlayerId,
-        timerSeconds: 15 // <-- Reset timer for both players every turn
-    });
+        const currentPlayerClass = (players.indexOf(currentUser.uid) === 0) ? 'player_1' : 'player_2';
+        let nextBoardState = [...boardState];
+        nextBoardState[index] = currentPlayerClass;
+
+        const row = Math.floor(index / cols);
+        const col = index % cols;
+
+        getNeighbors(row, col).forEach(nb => {
+            const neighborIndex = getBoxIndex(nb);
+            if (nextBoardState[neighborIndex] === null) {
+                const unclickedCount = countUnclickedNeighbors(nb, el, nextBoardState);
+                if (unclickedCount === 0) {
+                    nextBoardState[neighborIndex] = currentPlayerClass;
+                } else if (unclickedCount === 1) {
+                    nextBoardState = findAndFillChain(nb, el, currentPlayerClass, nextBoardState);
+                }
+            }
+        });
+
+        const currentPlayerIndex = players.indexOf(currentUser.uid);
+        const nextPlayerIndex = (currentPlayerIndex + 1) % players.length;
+        const nextPlayerId = players[nextPlayerIndex];
+
+        const gameRef = doc(db, 'games', currentGameId);
+        updateDoc(gameRef, {
+            boardState: nextBoardState,
+            currentPlayer: nextPlayerId,
+            timerSeconds: 15 // <-- Reset timer for both players every turn
+        });
+    }
 });
 
 // New event listener for starting the game with an opponent
