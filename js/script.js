@@ -404,9 +404,9 @@ startGameButton.addEventListener('click', async () => {
             });
 
             // Listen for someone joining our game
-            const unsubscribe = onSnapshot(myMatchRef, async (doc) => {
-                if (doc.exists() && doc.data().status === 'matched') {
-                    const matchData = doc.data();
+            const unsubscribe = onSnapshot(myMatchRef, async (matchSnap) => {
+                if (matchSnap.exists() && matchSnap.data().status === 'matched') {
+                    const matchData = matchSnap.data();
                     const opponentUid = matchData.matchedWith;
                     const gameId = `game-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
                     
