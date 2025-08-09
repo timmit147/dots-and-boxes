@@ -13,9 +13,22 @@
         <button id="signin-button">Sign In</button>
         <p id="auth-status"></p>
     </div>
-    <div id="game-container" style="display:none;">
-        <div class="board"></div>
+    
+    <div id="game-lobby-container" style="display:none;">
+        <h2>Game Lobby</h2>
+        <button id="create-game-button">Create New Game</button>
+        <br><br>
+        <input type="text" id="game-id-input" placeholder="Enter Game ID">
+        <button id="join-game-button">Join Game</button>
+        <p id="lobby-status"></p>
         <button id="signout-button">Sign Out</button>
+    </div>
+
+    <div id="game-container" style="display:none;">
+        <h2>Game Board</h2>
+        <p>You are in game: <span id="current-game-id"></span></p>
+        <div class="board"></div>
+        <button id="leave-game-button">Leave Game</button>
     </div>
     
     <script src="js/script.js"></script>
@@ -24,6 +37,7 @@
         // Import the functions you need from the SDKs you need
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
         // Your web app's Firebase configuration
         const firebaseConfig = {
@@ -38,9 +52,11 @@
         // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
+        const db = getFirestore(app);
 
         // Get DOM elements
         const authContainer = document.getElementById('auth-container');
+        const gameLobbyContainer = document.getElementById('game-lobby-container');
         const gameContainer = document.getElementById('game-container');
         const emailInput = document.getElementById('email');
         const passwordInput = document.getElementById('password');
@@ -48,8 +64,17 @@
         const signinButton = document.getElementById('signin-button');
         const signoutButton = document.getElementById('signout-button');
         const authStatus = document.getElementById('auth-status');
+        const createGameButton = document.getElementById('create-game-button');
+        const joinGameButton = document.getElementById('join-game-button');
+        const gameIdInput = document.getElementById('game-id-input');
+        const lobbyStatus = document.getElementById('lobby-status');
+        const currentGameIdSpan = document.getElementById('current-game-id');
+        const leaveGameButton = document.getElementById('leave-game-button');
+        
+        let currentUser = null;
+        let currentGameId = null;
 
-        // Handle sign up
+        // --- AUTHENTICATION LOGIC ---
         signupButton.addEventListener('click', () => {
             const email = emailInput.value;
             const password = passwordInput.value;
@@ -63,7 +88,6 @@
                 });
         });
 
-        // Handle sign in
         signinButton.addEventListener('click', () => {
             const email = emailInput.value;
             const password = passwordInput.value;
@@ -77,7 +101,6 @@
                 });
         });
 
-        // Handle sign out
         signoutButton.addEventListener('click', () => {
             signOut(auth).then(() => {
                 authStatus.textContent = 'User signed out.';
@@ -86,19 +109,87 @@
             });
         });
 
-        // Listen for authentication state changes
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                // User is signed in
+                currentUser = user;
                 authContainer.style.display = 'none';
-                gameContainer.style.display = 'block';
+                gameLobbyContainer.style.display = 'block';
                 console.log('User signed in:', user.email);
             } else {
-                // User is signed out
+                currentUser = null;
                 authContainer.style.display = 'block';
+                gameLobbyContainer.style.display = 'none';
                 gameContainer.style.display = 'none';
                 console.log('User signed out');
             }
+        });
+
+        // --- GAME LOBBY LOGIC ---
+
+        // Create a new game
+        createGameButton.addEventListener('click', async () => {
+            if (!currentUser) {
+                lobbyStatus.textContent = "Please sign in first.";
+                return;
+            }
+
+            const gameId = Math.random().toString(36).substring(2, 8); // Simple unique ID
+            const gameRef = doc(db, 'games', gameId);
+
+            await setDoc(gameRef, {
+                players: [currentUser.uid],
+                status: 'waiting'
+            });
+
+            currentGameId = gameId;
+            joinGame(gameId);
+        });
+
+        // Join an existing game
+        joinGameButton.addEventListener('click', async () => {
+            if (!currentUser) {
+                lobbyStatus.textContent = "Please sign in first.";
+                return;
+            }
+
+            const gameId = gameIdInput.value.trim();
+            if (!gameId) {
+                lobbyStatus.textContent = "Please enter a Game ID.";
+                return;
+            }
+
+            const gameRef = doc(db, 'games', gameId);
+            const gameSnap = await getDoc(gameRef);
+
+            if (gameSnap.exists()) {
+                const gameData = gameSnap.data();
+                if (gameData.players.length < 2) { // Limit to 2 players
+                    await updateDoc(gameRef, {
+                        players: [...gameData.players, currentUser.uid]
+                    });
+                    currentGameId = gameId;
+                    joinGame(gameId);
+                } else {
+                    lobbyStatus.textContent = "This game is already full.";
+                }
+            } else {
+                lobbyStatus.textContent = "Game not found.";
+            }
+        });
+
+        // Function to switch to the game view
+        function joinGame(gameId) {
+            gameLobbyContainer.style.display = 'none';
+            gameContainer.style.display = 'block';
+            currentGameIdSpan.textContent = gameId;
+        }
+
+        // Handle leaving the game
+        leaveGameButton.addEventListener('click', () => {
+            // Logic to remove player from Firestore game document (optional)
+            currentGameId = null;
+            gameLobbyContainer.style.display = 'block';
+            gameContainer.style.display = 'none';
         });
     </script>
 </body>
