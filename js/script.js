@@ -1,7 +1,7 @@
 // Firebase configuration and initialization
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot, collection, deleteDoc } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyCQh3iNGIGDVaFTmiEGyZa6r5r7U0thX80",
@@ -36,6 +36,7 @@ const currentGameIdSpan = document.getElementById('current-game-id');
 const leaveGameButton = document.getElementById('leave-game-button');
 const currentPlayerTurnSpan = document.getElementById('current-player-turn');
 const timerDisplay = document.getElementById('timer-display'); // New element for timer display
+const startGameButton = document.getElementById('start-game-button'); // New element for start game
 
 // Game state variables
 const rows = 10;
@@ -382,5 +383,66 @@ board.addEventListener('click', (event) => {
     updateDoc(gameRef, {
         boardState: nextBoardState,
         currentPlayer: nextPlayerId
+    });
+});
+
+// New event listener for starting the game with an opponent
+startGameButton.addEventListener('click', async () => {
+    if (!currentUser) {
+        lobbyStatus.textContent = "Please sign in first.";
+        return;
+    }
+
+    lobbyStatus.textContent = "Waiting for opponent...";
+
+    const matchesRef = collection(db, 'matches');
+    const myMatchRef = doc(matchesRef, currentUser.uid);
+
+    // Add yourself as waiting for a match
+    await setDoc(myMatchRef, { uid: currentUser.uid, timestamp: Date.now() });
+
+    // Listen for matches
+    const unsubscribe = onSnapshot(matchesRef, async (snapshot) => {
+        // Get all waiting players
+        const waitingPlayers = [];
+        snapshot.forEach(docSnap => {
+            waitingPlayers.push(docSnap.data().uid);
+        });
+
+        // Only proceed if there are at least 2 players waiting
+        if (waitingPlayers.length >= 2) {
+            // Sort UIDs to get a deterministic order
+            const bothUids = waitingPlayers.slice(0, 2).sort();
+            const opponentUid = bothUids.find(uid => uid !== currentUser.uid);
+
+            // Only the player with the lowest UID creates the game
+            const gameId = bothUids.join('-');
+            if (currentUser.uid === bothUids[0]) {
+                const gameRef = doc(db, 'games', gameId);
+
+                let name = currentUser.isAnonymous
+                    ? "Guest" + Math.floor(1000 + Math.random() * 9000)
+                    : currentUser.email.split('@')[0];
+
+                await setDoc(gameRef, {
+                    players: bothUids,
+                    playerNames: { [currentUser.uid]: name, [opponentUid]: "Opponent" },
+                    status: 'playing',
+                    boardState: Array(100).fill(null),
+                    currentPlayer: currentUser.uid,
+                    timerSeconds: 15
+                });
+            }
+
+            // Remove both from matches
+            await deleteDoc(doc(matchesRef, bothUids[0]));
+            await deleteDoc(doc(matchesRef, bothUids[1]));
+
+            // Both players join the game
+            currentGameId = gameId;
+            joinGame(gameId);
+
+            unsubscribe(); // Stop listening
+        }
     });
 });
