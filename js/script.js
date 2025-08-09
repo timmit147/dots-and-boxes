@@ -118,15 +118,22 @@ function startTurnTimer() {
         if (timerSeconds <= 0) {
             clearInterval(timerInterval);
             timerActive = false;
-            // Handle timer end: auto-play or pass turn
+            
+            // Count boxes for each player
+            const boxes = Array.from(board.children);
+            const player1Boxes = boxes.filter(box => box.classList.contains('player_1')).length;
+            const player2Boxes = boxes.filter(box => box.classList.contains('player_2')).length;
+            
+            // Determine winner
             const currentPlayerIndex = players.indexOf(currentUser.uid);
-            const nextPlayerIndex = (currentPlayerIndex + 1) % players.length;
-            const nextPlayerId = players[nextPlayerIndex];
+            const winnerId = player1Boxes > player2Boxes ? players[0] : 
+                           player2Boxes > player1Boxes ? players[1] : null;
 
             const gameRef = doc(db, 'games', currentGameId);
             updateDoc(gameRef, {
-                currentPlayer: nextPlayerId,
-                timerSeconds: 15 // Reset timer for next player
+                status: 'ended',
+                winner: winnerId,
+                timerSeconds: 0
             });
         }
     }, 1000);
@@ -350,13 +357,18 @@ startGameButton.addEventListener('click', async () => {
             if (currentUser.uid === bothUids[0]) {
                 const gameRef = doc(db, 'games', gameId);
 
-                let name = currentUser.isAnonymous
+                const myName = currentUser.isAnonymous
                     ? "Guest" + Math.floor(1000 + Math.random() * 9000)
                     : currentUser.email.split('@')[0];
+                
+                const opponentDoc = await getDoc(doc(db, 'users', opponentUid));
+                const opponentName = opponentDoc.exists() 
+                    ? opponentDoc.data().name 
+                    : "Guest" + Math.floor(1000 + Math.random() * 9000);
 
                 await setDoc(gameRef, {
                     players: bothUids,
-                    playerNames: { [currentUser.uid]: name, [opponentUid]: "Opponent" },
+                    playerNames: { [currentUser.uid]: myName, [opponentUid]: opponentName },
                     status: 'playing',
                     boardState: Array(100).fill(null),
                     currentPlayer: currentUser.uid,
