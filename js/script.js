@@ -28,14 +28,9 @@ const signinButton = document.getElementById('signin-button');
 const signoutButton = document.getElementById('signout-button');
 const guestLoginButton = document.getElementById('guest-login-button'); // New element for guest login
 const authStatus = document.getElementById('auth-status');
-const createGameButton = document.getElementById('create-game-button');
-const joinGameButton = document.getElementById('join-game-button');
-const gameIdInput = document.getElementById('game-id-input');
 const lobbyStatus = document.getElementById('lobby-status');
 const currentGameIdSpan = document.getElementById('current-game-id');
 const leaveGameButton = document.getElementById('leave-game-button');
-const currentPlayerTurnSpan = document.getElementById('current-player-turn');
-const timerDisplay = document.getElementById('timer-display'); // New element for timer display
 const startGameButton = document.getElementById('start-game-button'); // New element for start game
 
 // Game state variables
@@ -256,87 +251,6 @@ onAuthStateChanged(auth, (user) => {
         gameContainer.style.display = 'none';
     }
 });
-
-createGameButton.addEventListener('click', async () => {
-    if (!currentUser) {
-        lobbyStatus.textContent = "Please sign in first.";
-        return;
-    }
-    const gameId = Math.random().toString(36).substring(2, 8);
-    const gameRef = doc(db, 'games', gameId);
-    await setDoc(gameRef, {
-        players: [currentUser.uid],
-        status: 'waiting',
-        boardState: Array(100).fill(null)
-    });
-    currentGameId = gameId;
-    joinGame(gameId);
-});
-
-joinGameButton.addEventListener('click', async () => {
-    if (!currentUser) {
-        lobbyStatus.textContent = "Please sign in first.";
-        return;
-    }
-    const gameId = gameIdInput.value.trim();
-    if (!gameId) {
-        lobbyStatus.textContent = "Please enter a Game ID.";
-        return;
-    }
-    const gameRef = doc(db, 'games', gameId);
-    const gameSnap = await getDoc(gameRef);
-
-    if (gameSnap.exists()) {
-        const gameData = gameSnap.data();
-        if (gameData.players.length < 2) {
-            await updateDoc(gameRef, {
-                players: [...gameData.players, currentUser.uid],
-                status: 'playing',
-                currentPlayer: gameData.players[0]
-            });
-            currentGameId = gameId;
-            joinGame(gameId);
-        } else {
-            lobbyStatus.textContent = "This game is already full.";
-        }
-    } else {
-        lobbyStatus.textContent = "Game not found.";
-    }
-});
-
-function joinGame(gameId) {
-    gameLobbyContainer.style.display = 'none';
-    // The main change: Show the game container
-    gameContainer.style.display = 'flex'; 
-    currentGameIdSpan.textContent = gameId;
-    setGridLayout();
-
-    const gameRef = doc(db, 'games', gameId);
-    if (unsubscribeFromGame) unsubscribeFromGame();
-
-    unsubscribeFromGame = onSnapshot(gameRef, (docSnap) => {
-        if (docSnap.exists()) {
-            const gameData = docSnap.data();
-            boardState = gameData.boardState;
-            players = gameData.players;
-            currentPlayerId = gameData.currentPlayer;
-            timerSeconds = typeof gameData.timerSeconds === 'number' ? gameData.timerSeconds : 15;
-
-            renderBoard(boardState);
-
-            // Always display timer from Firestore
-            updateTimerDisplay();
-
-            // Only start local timer if it's your turn and game not ended
-            if (!gameEnded && currentUser && currentUser.uid === currentPlayerId && !timerActive) {
-                startTurnTimer();
-            } else {
-                clearInterval(timerInterval);
-                timerActive = false;
-            }
-        }
-    });
-}
 
 leaveGameButton.addEventListener('click', () => {
     if (unsubscribeFromGame) unsubscribeFromGame();
