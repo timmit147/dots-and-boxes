@@ -1,7 +1,7 @@
 // Firebase configuration and initialization
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyCQh3iNGIGDVaFTmiEGyZa6r5r7U0thX80",
@@ -233,7 +233,7 @@ joinGameButton.addEventListener('click', async () => {
             await updateDoc(gameRef, {
                 players: [...gameData.players, currentUser.uid],
                 status: 'playing',
-                currentPlayer: gameData.players[0] // Creator starts the game
+                currentPlayer: gameData.players[0]
             });
             currentGameId = gameId;
             joinGame(gameId);
@@ -249,10 +249,10 @@ function joinGame(gameId) {
     gameLobbyContainer.style.display = 'none';
     gameContainer.style.display = 'block';
     currentGameIdSpan.textContent = gameId;
-    setGridLayout(); // Render the initial board
+    setGridLayout();
 
     const gameRef = doc(db, 'games', gameId);
-    if (unsubscribeFromGame) unsubscribeFromGame(); // Cleanup previous listener
+    if (unsubscribeFromGame) unsubscribeFromGame();
 
     unsubscribeFromGame = onSnapshot(gameRef, (docSnap) => {
         if (docSnap.exists()) {
@@ -287,7 +287,6 @@ board.addEventListener('click', (event) => {
 
     const currentPlayerClass = (players.indexOf(currentUser.uid) === 0) ? 'player_1' : 'player_2';
     
-    // Update the board state locally first
     let nextBoardState = [...boardState];
     nextBoardState[index] = currentPlayerClass;
 
