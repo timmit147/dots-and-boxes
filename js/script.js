@@ -470,20 +470,26 @@ function joinGame(gameId) {
     const gameRef = doc(db, 'games', gameId);
     if (unsubscribeFromGame) unsubscribeFromGame();
 
+    let lastPlayerId = null;
     unsubscribeFromGame = onSnapshot(gameRef, (docSnap) => {
         if (docSnap.exists()) {
             const gameData = docSnap.data();
             boardState = gameData.boardState;
             players = gameData.players;
-            currentPlayerId = gameData.currentPlayer;
             const playerNames = gameData.playerNames || {};
             timerSeconds = typeof gameData.timerSeconds === 'number' ? gameData.timerSeconds : 15;
+            const timerContainer = document.getElementById('timer-container');
+
+            // Detect turn change
+            const newPlayerId = gameData.currentPlayer;
+            const turnChanged = lastPlayerId !== newPlayerId;
+            currentPlayerId = newPlayerId;
+            lastPlayerId = newPlayerId;
 
             renderBoard(boardState);
             renderPlayerNames(players, playerNames);
 
             // Show winner message if game is ended
-            const timerContainer = document.getElementById('timer-container');
             if (gameData.status === 'ended') {
                 gameEnded = true;
                 clearInterval(timerInterval);
@@ -500,7 +506,10 @@ function joinGame(gameId) {
 
             // Only start timer if both players are present and game is playing
             if (players.length === 2 && gameData.status === 'playing') {
-                if (!gameEnded && currentUser && currentUser.uid === currentPlayerId && !timerActive) {
+                // Always clear and reset timer on turn change
+                clearInterval(timerInterval);
+                timerActive = false;
+                if (!gameEnded && currentUser && currentUser.uid === currentPlayerId) {
                     startTurnTimer();
                 }
                 updateTimerDisplay();
