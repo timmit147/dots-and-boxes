@@ -47,6 +47,7 @@ let currentUser = null;
 let currentGameId = null;
 let unsubscribeFromGame = null;
 let boardState = Array(100).fill(null);
+let displayName = null;
 
 // --- Board Rendering Logic ---
 function setGridLayout() {
