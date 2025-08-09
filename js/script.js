@@ -459,7 +459,6 @@ startGameButton.addEventListener('click', async () => {
         lobbyStatus.textContent = "Error finding opponent. Please try again.";
     }
 });
-
         }
     });
 });
