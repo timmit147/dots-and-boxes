@@ -513,7 +513,7 @@ startGameButton.addEventListener('click', async () => {
         await setDoc(gameRef, {
             players: [currentUser.uid],
             playerNames: { [currentUser.uid]: name },
-            status: 'waiting',
+            status: 'open', // <-- changed from 'waiting'
             boardState: Array(100).fill(null)
         });
         currentGameId = gameId;
