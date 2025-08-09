@@ -107,27 +107,14 @@ function renderPlayerNames(players) {
     container.innerHTML = '';
 
     players.forEach((uid, idx) => {
-        // Determine player class and color
         const playerClass = idx === 0 ? 'player_1' : 'player_2';
-        // Count score
         const score = boardState.filter(cell => cell === playerClass).length;
 
-        // Build label
-        let label = `Player ${idx + 1}`;
-        if (currentUser && currentUser.uid === uid && currentUser.isAnonymous) {
-            label += " (Guest)";
-        } else if (currentUser && currentUser.uid === uid && currentUser.email) {
-            label += ` (${currentUser.email})`;
-        }
-
-        label += ` — Score: ${score}`;
-
-        // Create element
+        // Only show score number
         const span = document.createElement('span');
-        span.textContent = label;
+        span.textContent = score;
         span.classList.add('player-name', playerClass);
 
-        // Add your-turn class if it's this player's turn
         if (currentPlayerId === uid) {
             span.classList.add('your-turn');
         }
