@@ -34,6 +34,10 @@ button{
     color: #252525;
 }
 
+button:hover{
+    cursor: pointer;
+}
+
 input{
     padding: 10px;
     background-color: white;
@@ -61,6 +65,10 @@ input{
     display: flex;
 }
 
+.game-layout:hover{
+    cursor: pointer;
+}
+
 #game-container {
     flex-direction: column;
     width: 100%;
@@ -75,7 +83,7 @@ input{
     display: grid;
     grid-gap: 0;
     margin: auto;
-    max-width: 400px;
+    max-width: 550px;
 }
 
 #timer-container{
@@ -86,10 +94,14 @@ input{
 
 #leave-game-button {
     background-image: url("../assets/angle.svg");
-    height: 15px;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain; /* Fit the whole SVG inside */
+    height: 20px;
     aspect-ratio: 1;
-    background-color: unset;
-    border: 0;
+    background-color: transparent;
+    border: none;
+    padding: 0;
 }
 
 #player-names-container {
@@ -109,10 +121,14 @@ input{
 
 .player_1{
     background-color:#EF2828;
-    padding: 5px;
+        color: white;
+    font-weight: 700;
+    padding: 10px;
 }
 
 .player_2{
     background-color:#126EBE;
-    padding: 5px;
+        color: white;
+    font-weight: 700;
+    padding: 10px;
 }
