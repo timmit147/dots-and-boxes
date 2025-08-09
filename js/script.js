@@ -286,6 +286,7 @@ leaveGameButton.addEventListener('click', () => {
 });
 
 board.addEventListener('click', (event) => {
+    if (gameEnded || !currentGameId) return; // <-- added
     const el = event.target;
     const index = getBoxIndex(el);
 
@@ -394,6 +395,9 @@ function joinGame(gameId) {
     gameLobbyContainer.style.display = 'none';
     gameContainer.style.display = 'flex';
     setGridLayout();
+    // Reset end-state visuals when joining a game
+    gameEnded = false;
+    if (board) board.classList.remove('disabled');
 
     const gameRef = doc(db, 'games', gameId);
     if (unsubscribeFromGame) unsubscribeFromGame();
@@ -416,6 +420,7 @@ function joinGame(gameId) {
                 gameEnded = true;
                 clearInterval(timerInterval);
                 timerActive = false;
+                if (board) board.classList.add('disabled');
 
                 if (gameData.winner) {
                     const winnerName = playerNames[gameData.winner] || 'Opponent';
@@ -428,6 +433,7 @@ function joinGame(gameId) {
 
             // Only start timer if both players are present and game is playing
             if (players.length === 2 && gameData.status === 'playing') {
+                if (board) board.classList.remove('disabled');
                 if (!gameEnded && currentUser && currentUser.uid === currentPlayerId && !timerActive) {
                     startTurnTimer();
                 }
@@ -435,6 +441,7 @@ function joinGame(gameId) {
             } else {
                 clearInterval(timerInterval);
                 timerActive = false;
+                if (board) board.classList.add('disabled');
                 timerContainer.textContent = "Waiting for opponent...";
             }
         }

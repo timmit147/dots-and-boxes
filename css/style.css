@@ -87,6 +87,12 @@ input{
     max-width: 550px;
 }
 
+/* Disable clicks when game ended */
+.board.disabled {
+    pointer-events: none;
+    opacity: 0.6;
+}
+
 #timer-container{
     padding: 20px;
     padding-bottom: 0;
