@@ -475,7 +475,7 @@ startGameButton.addEventListener('click', async () => {
     while (Date.now() - searchStart < 5000) {
         const gamesQuery = query(
             collection(db, 'games'),
-            where('status', '==', 'waiting')
+            where('status', '==', 'open')
         );
         const querySnapshot = await getDocs(gamesQuery);
 
@@ -513,7 +513,7 @@ startGameButton.addEventListener('click', async () => {
         await setDoc(gameRef, {
             players: [currentUser.uid],
             playerNames: { [currentUser.uid]: name },
-            status: 'open', // <-- changed from 'waiting'
+            status: 'open',
             boardState: Array(100).fill(null)
         });
         currentGameId = gameId;
