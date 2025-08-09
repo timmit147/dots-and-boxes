@@ -460,39 +460,6 @@ startGameButton.addEventListener('click', async () => {
     }
 });
 
-            // Only the player with the lowest UID creates the game
-            const gameId = bothUids.join('-');
-            if (currentUser.uid === bothUids[0]) {
-                const gameRef = doc(db, 'games', gameId);
-
-                const myName = currentUser.isAnonymous
-                    ? "Guest" + Math.floor(1000 + Math.random() * 9000)
-                    : currentUser.email.split('@')[0];
-                
-                const opponentDoc = await getDoc(doc(db, 'users', opponentUid));
-                const opponentName = opponentDoc.exists() 
-                    ? opponentDoc.data().name 
-                    : "Guest" + Math.floor(1000 + Math.random() * 9000);
-
-                await setDoc(gameRef, {
-                    players: bothUids,
-                    playerNames: { [currentUser.uid]: myName, [opponentUid]: opponentName },
-                    status: 'playing',
-                    boardState: Array(100).fill(null),
-                    currentPlayer: currentUser.uid,
-                    timerSeconds: 15
-                });
-            }
-
-            // Remove both from matches
-            await deleteDoc(doc(matchesRef, bothUids[0]));
-            await deleteDoc(doc(matchesRef, bothUids[1]));
-
-            // Both players join the game
-            currentGameId = gameId;
-            joinGame(gameId);
-
-            unsubscribe(); // Stop listening
         }
     });
 });
