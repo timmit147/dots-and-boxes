@@ -155,11 +155,26 @@ function updateTimerDisplay() {
     }
 }
 
-function showTimeoutWin() {
+async function showTimeoutWin() {
     gameEnded = true;
     clearInterval(timerInterval);
     timerActive = false;
-    endGame(boardState, true); // Pass true for timeout
+
+    const timerContainer = document.getElementById('timer-container');
+    if (timerContainer) {
+        timerContainer.textContent = "Time's up! Opponent wins!";
+    }
+
+    if (currentGameId) {
+        const gameRef = doc(db, 'games', currentGameId);
+        const opponentIdx = players[0] === currentUser.uid ? 1 : 0;
+        const winnerId = players[opponentIdx];
+
+        await updateDoc(gameRef, {
+            status: 'ended',
+            winner: winnerId
+        });
+    }
 }
 
 // --- Game Logic ---
