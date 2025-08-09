@@ -57,6 +57,11 @@ function setGridLayout() {
     const totalBoxes = rows * cols;
     for (let i = 0; i < totalBoxes; i++) {
         const box = document.createElement('div');
+        const row = Math.floor(i / cols);
+        const col = i % cols;
+        if ((row + col) % 2 !== 0) {
+            box.classList.add('even');
+        }
         box.classList.add('box');
         board.appendChild(box);
     }
