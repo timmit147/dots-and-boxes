@@ -257,8 +257,10 @@ signoutButton.addEventListener('click', () => {
 });
 
 onAuthStateChanged(auth, (user) => {
+    currentUser = user;
+
     if (user) {
-        currentUser = user;
+        // Logged in: keep auth hidden
         authContainer.style.display = 'none';
         gameLobbyContainer.style.display = 'flex';
         // Optional: Differentiate UI for guest users
@@ -268,7 +270,7 @@ onAuthStateChanged(auth, (user) => {
             authStatus.textContent = `Welcome, ${user.email}!`;
         }
     } else {
-        currentUser = null;
+        // Not logged in: show auth
         authContainer.style.display = 'flex';
         gameLobbyContainer.style.display = 'none';
         gameContainer.style.display = 'none';

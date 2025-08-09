@@ -54,6 +54,7 @@ input{
     justify-content: center;
     display: flex;
     color: white;
+    display: none; /* Hide auth container by default to avoid flash on load */
 }
 
 .game-layout {
