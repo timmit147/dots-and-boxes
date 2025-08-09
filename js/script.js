@@ -205,7 +205,8 @@ function renderPlayerNames(players, playerNames) {
         playerDiv.className = `player player_${index + 1}`;
         const name = playerNames[playerId] || `Player ${index + 1}`;
         const isCurrentPlayer = playerId === currentPlayerId;
-        playerDiv.innerHTML = `${name}${isCurrentPlayer ? ' (Current Turn)' : ''}`;
+        const isYou = playerId === currentUser?.uid;
+        playerDiv.innerHTML = `${name} ${isYou ? '(You)' : ''} ${isCurrentPlayer ? '- Your Turn!' : ''}`;
         playerNamesContainer.appendChild(playerDiv);
     });
 }
@@ -329,27 +330,63 @@ startGameButton.addEventListener('click', async () => {
         return;
     }
 
+    // Disable button to prevent multiple clicks
+    startGameButton.disabled = true;
     lobbyStatus.textContent = "Waiting for opponent...";
 
     const matchesRef = collection(db, 'matches');
     const myMatchRef = doc(matchesRef, currentUser.uid);
+    const timestamp = Date.now();
 
-    // Add yourself as waiting for a match
-    await setDoc(myMatchRef, { uid: currentUser.uid, timestamp: Date.now() });
+    try {
+        // First, try to join an existing game
+        const availableMatches = await getDocs(query(
+            matchesRef,
+            where('timestamp', '<', timestamp),
+            where('timestamp', '>', timestamp - 30000), // Only matches from last 30 seconds
+            limit(1)
+        ));
 
-    // Listen for matches
-    const unsubscribe = onSnapshot(matchesRef, async (snapshot) => {
-        // Get all waiting players
-        const waitingPlayers = [];
-        snapshot.forEach(docSnap => {
-            waitingPlayers.push(docSnap.data().uid);
-        });
+        let matched = false;
+        for (const matchDoc of availableMatches.docs) {
+            const matchData = matchDoc.data();
+            if (matchData.uid !== currentUser.uid && !matchData.matched) {
+                // Found a match, try to claim it
+                try {
+                    await updateDoc(matchDoc.ref, { matched: true });
+                    matched = true;
+                    // Create game with the found opponent
+                    const opponentUid = matchData.uid;
+                    const gameId = `${Math.min(currentUser.uid, opponentUid)}-${Math.max(currentUser.uid, opponentUid)}-${timestamp}`;
+                    await createGame(gameId, currentUser.uid, opponentUid);
+                    break;
+                } catch (e) {
+                    console.log('Match already taken, continuing search...');
+                }
+            }
+        }
 
-        // Only proceed if there are at least 2 players waiting
-        if (waitingPlayers.length >= 2) {
-            // Sort UIDs to get a deterministic order
-            const bothUids = waitingPlayers.slice(0, 2).sort();
-            const opponentUid = bothUids.find(uid => uid !== currentUser.uid);
+        if (!matched) {
+            // If no match found, add yourself to the pool
+            await setDoc(myMatchRef, { 
+                uid: currentUser.uid, 
+                timestamp: timestamp,
+                matched: false 
+            });
+
+            // Listen for someone matching with you
+            const unsubscribe = onSnapshot(myMatchRef, async (docSnap) => {
+                if (docSnap.exists() && docSnap.data().matched) {
+                    const matches = await getDocs(query(
+                        matchesRef,
+                        where('timestamp', '>', timestamp),
+                        where('matched', '==', true),
+                        limit(1)
+                    ));
+                    
+                    if (!matches.empty) {
+                        const matchData = matches.docs[0].data();
+                        const opponentUid = matchData.uid;
 
             // Only the player with the lowest UID creates the game
             const gameId = bothUids.join('-');
