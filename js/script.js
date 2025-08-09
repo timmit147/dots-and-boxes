@@ -29,7 +29,6 @@ const signoutButton = document.getElementById('signout-button');
 const guestLoginButton = document.getElementById('guest-login-button'); // New element for guest login
 const authStatus = document.getElementById('auth-status');
 const lobbyStatus = document.getElementById('lobby-status');
-const currentGameIdSpan = document.getElementById('current-game-id');
 const leaveGameButton = document.getElementById('leave-game-button');
 const startGameButton = document.getElementById('start-game-button'); // New element for start game
 const timerDisplay = document.getElementById('timer-container');
@@ -392,7 +391,6 @@ startGameButton.addEventListener('click', async () => {
 function joinGame(gameId) {
     gameLobbyContainer.style.display = 'none';
     gameContainer.style.display = 'flex';
-    currentGameIdSpan.textContent = gameId;
     setGridLayout();
 
     const gameRef = doc(db, 'games', gameId);
