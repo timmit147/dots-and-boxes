@@ -387,17 +387,32 @@ startGameButton.addEventListener('click', async () => {
 
                 // Create the game with sorted players array
                 const sortedPlayers = [waitingPlayerId, currentUser.uid].sort();
-                await setDoc(gameRef, {
+                
+                // Before writing to Firestore, inspect the data
+                console.log("Data being written:", {
                     players: sortedPlayers,
-                    playerNames: { 
+                    playerNames: {
                         [waitingPlayerId]: opponentName,
-                        [currentUser.uid]: myName 
+                        [currentUser.uid]: myName
                     },
                     status: 'playing',
                     boardState: Array(100).fill(null),
                     currentPlayer: sortedPlayers[0],
                     timerSeconds: 15,
-                    lastUpdate: Date.now() // Add timestamp for sync verification
+                    lastUpdate: Date.now()
+                });
+
+                await setDoc(gameRef, {
+                    players: sortedPlayers,
+                    playerNames: {
+                        [waitingPlayerId]: opponentName,
+                        [currentUser.uid]: myName
+                    },
+                    status: 'playing',
+                    boardState: Array(100).fill(null),
+                    currentPlayer: sortedPlayers[0],
+                    timerSeconds: 15,
+                    lastUpdate: Date.now()
                 });
 
                 // Clean up the match document
