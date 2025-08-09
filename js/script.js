@@ -48,6 +48,9 @@ let currentGameId = null;
 let unsubscribeFromGame = null;
 let boardState = Array(100).fill(null);
 let displayName = null;
+let timerInterval = null;
+let timerSeconds = 15;
+let timerActive = false;
 
 // --- Board Rendering Logic ---
 function setGridLayout() {
@@ -125,6 +128,38 @@ function renderPlayerNames(players, playerNames) {
 
         container.appendChild(span);
     });
+}
+
+function startTurnTimer() {
+    clearInterval(timerInterval);
+    timerSeconds = 15;
+    timerActive = true;
+    updateTimerDisplay();
+
+    timerInterval = setInterval(() => {
+        timerSeconds--;
+        updateTimerDisplay();
+        if (timerSeconds <= 0) {
+            clearInterval(timerInterval);
+            timerActive = false;
+            showTimeoutWin();
+        }
+    }, 1000);
+}
+
+function updateTimerDisplay() {
+    const timerContainer = document.getElementById('timer-container');
+    if (timerContainer) {
+        timerContainer.textContent = `Time left: ${timerSeconds}s`;
+    }
+}
+
+function showTimeoutWin() {
+    const timerContainer = document.getElementById('timer-container');
+    if (timerContainer) {
+        timerContainer.textContent = "Time's up! Opponent wins!";
+    }
+    // Optionally, you can add logic here to end the game or update Firestore
 }
 
 // --- Game Logic ---
@@ -352,6 +387,52 @@ leaveGameButton.addEventListener('click', () => {
 });
 
 board.addEventListener('click', (event) => {
+    const el = event.target;
+    const index = getBoxIndex(el);
+
+    if (index === -1 || clickedBoxes.has(el) || currentUser.uid !== currentPlayerId) {
+        return;
+    }
+
+    const currentPlayerClass = (players.indexOf(currentUser.uid) === 0) ? 'player_1' : 'player_2';
+    
+    let nextBoardState = [...boardState];
+    nextBoardState[index] = currentPlayerClass;
+
+    const row = Math.floor(index / cols);
+    const col = index % cols;
+
+    getNeighbors(row, col).forEach(nb => {
+        const neighborIndex = getBoxIndex(nb);
+        if (nextBoardState[neighborIndex] === null) {
+            const unclickedCount = countUnclickedNeighbors(nb, el, nextBoardState);
+            
+            if (unclickedCount === 0) {
+                nextBoardState[neighborIndex] = currentPlayerClass;
+            } else if (unclickedCount === 1) {
+                nextBoardState = findAndFillChain(nb, el, currentPlayerClass, nextBoardState);
+            }
+        }
+    });
+
+    const currentPlayerIndex = players.indexOf(currentUser.uid);
+    const nextPlayerIndex = (currentPlayerIndex + 1) % players.length;
+    const nextPlayerId = players[nextPlayerIndex];
+
+    const gameRef = doc(db, 'games', currentGameId);
+    updateDoc(gameRef, {
+        boardState: nextBoardState,
+        currentPlayer: nextPlayerId
+    });
+});
+
+// Stop timer when user clicks a square
+board.addEventListener('click', (event) => {
+    if (timerActive) {
+        clearInterval(timerInterval);
+        timerActive = false;
+        updateTimerDisplay();
+    }
     const el = event.target;
     const index = getBoxIndex(el);
 
