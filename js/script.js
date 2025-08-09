@@ -104,25 +104,35 @@ function renderPlayerNames(players) {
     const container = document.getElementById('player-names-container');
     if (!container) return;
 
-    // Fetch user info for each player (email or "Guest")
-    Promise.all(players.map(async (uid, idx) => {
-        // Try to get user info from Firebase Auth
-        try {
-            // Firebase Auth does not allow fetching arbitrary user info client-side for security.
-            // So we show "Player 1" and "Player 2" or "Guest" if anonymous.
-            const isCurrent = currentUser && currentUser.uid === uid;
-            let label = `Player ${idx + 1}`;
-            if (isCurrent && currentUser.isAnonymous) {
-                label += " (Guest)";
-            } else if (isCurrent && currentUser.email) {
-                label += ` (${currentUser.email})`;
-            }
-            return `<span>${label}</span>`;
-        } catch {
-            return `<span>Player ${idx + 1}</span>`;
+    container.innerHTML = '';
+
+    players.forEach((uid, idx) => {
+        // Determine player class and color
+        const playerClass = idx === 0 ? 'player_1' : 'player_2';
+        // Count score
+        const score = boardState.filter(cell => cell === playerClass).length;
+
+        // Build label
+        let label = `Player ${idx + 1}`;
+        if (currentUser && currentUser.uid === uid && currentUser.isAnonymous) {
+            label += " (Guest)";
+        } else if (currentUser && currentUser.uid === uid && currentUser.email) {
+            label += ` (${currentUser.email})`;
         }
-    })).then(names => {
-        container.innerHTML = names.join(' &nbsp; ');
+
+        label += ` — Score: ${score}`;
+
+        // Create element
+        const span = document.createElement('span');
+        span.textContent = label;
+        span.classList.add('player-name', playerClass);
+
+        // Add your-turn class if it's this player's turn
+        if (currentPlayerId === uid) {
+            span.classList.add('your-turn');
+        }
+
+        container.appendChild(span);
     });
 }
 
