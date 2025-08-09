@@ -1,7 +1,7 @@
 // Firebase configuration and initialization
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot, query, collection, where, getDocs } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyCQh3iNGIGDVaFTmiEGyZa6r5r7U0thX80",
@@ -548,3 +548,57 @@ function endGame(finalBoardState, isTimeout = false) {
         if (timerContainer) timerContainer.textContent = winnerText;
     }
 }
+
+startGameButton.addEventListener('click', async () => {
+    if (!currentUser) {
+        lobbyStatus.textContent = "Please sign in first.";
+        return;
+    }
+
+    // Look for an open game (status: 'waiting', 1 player)
+    const gamesQuery = query(
+        collection(db, 'games'),
+        where('status', '==', 'waiting')
+    );
+    const querySnapshot = await getDocs(gamesQuery);
+
+    let joined = false;
+    querySnapshot.forEach(async (gameDoc) => {
+        const gameData = gameDoc.data();
+        if (gameData.players.length === 1 && !gameData.players.includes(currentUser.uid)) {
+            // Join this game
+            let name = currentUser.isAnonymous
+                ? "Guest" + Math.floor(1000 + Math.random() * 9000)
+                : currentUser.email.split('@')[0];
+
+            await updateDoc(gameDoc.ref, {
+                players: [...gameData.players, currentUser.uid],
+                playerNames: { ...gameData.playerNames, [currentUser.uid]: name },
+                status: 'playing',
+                currentPlayer: gameData.players[0]
+            });
+            currentGameId = gameDoc.id;
+            joinGame(gameDoc.id);
+            joined = true;
+        }
+    });
+
+    if (!joined) {
+        // No open game found, create a new one
+        const gameId = Math.floor(100000 + Math.random() * 900000).toString();
+        const gameRef = doc(db, 'games', gameId);
+
+        let name = currentUser.isAnonymous
+            ? "Guest" + Math.floor(1000 + Math.random() * 9000)
+            : currentUser.email.split('@')[0];
+
+        await setDoc(gameRef, {
+            players: [currentUser.uid],
+            playerNames: { [currentUser.uid]: name },
+            status: 'waiting',
+            boardState: Array(100).fill(null)
+        });
+        currentGameId = gameId;
+        joinGame(gameId);
+    }
+});
