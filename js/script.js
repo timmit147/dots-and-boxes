@@ -466,13 +466,13 @@ startGameButton.addEventListener('click', async () => {
     lobbyStatus.textContent = "Searching for open games...";
 
     let joined = false;
-    let searchStart = Date.now();
     let name = currentUser.isAnonymous
         ? "Guest" + Math.floor(1000 + Math.random() * 9000)
         : currentUser.email.split('@')[0];
 
     // Try to join an open game for up to 5 seconds
-    while (Date.now() - searchStart < 5000 && !joined) {
+    const searchStart = Date.now();
+    while (Date.now() - searchStart < 5000) {
         const gamesQuery = query(
             collection(db, 'games'),
             where('status', '==', 'waiting')
@@ -499,14 +499,13 @@ startGameButton.addEventListener('click', async () => {
             }
         }
 
-        if (!joined) {
-            // Wait 500ms before checking again
-            await new Promise(res => setTimeout(res, 500));
-        }
+        if (joined) break;
+        // Wait 500ms before checking again
+        await new Promise(res => setTimeout(res, 500));
     }
 
+    // Only create a new game if NOT joined after 5 seconds
     if (!joined) {
-        // No open game found after 5 seconds, create a new one
         lobbyStatus.textContent = "No open games found. Creating a new game...";
         const gameId = Math.floor(100000 + Math.random() * 900000).toString();
         const gameRef = doc(db, 'games', gameId);
