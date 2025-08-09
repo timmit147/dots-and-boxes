@@ -326,10 +326,6 @@ function joinGame(gameId) {
             
             renderBoard(boardState);
 
-            if (gameData.currentPlayer) {
-                currentPlayerTurnSpan.textContent = (gameData.currentPlayer === currentUser.uid) ? 'Your Turn' : 'Opponent\'s Turn';
-            }
-
             // New: Update player names display
             playerNamesContainer.innerHTML = '';
             gameData.players.forEach((playerId, index) => {
