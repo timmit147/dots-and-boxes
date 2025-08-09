@@ -563,3 +563,60 @@ function joinGame(gameId) {
         }
     });
 }
+
+// Listen for game changes (call this after joining/creating a game)
+function listenToGame(gameId) {
+    const gameRef = doc(db, 'games', gameId);
+    if (unsubscribeFromGame) unsubscribeFromGame();
+    unsubscribeFromGame = onSnapshot(gameRef, (docSnap) => {
+        if (!docSnap.exists()) return;
+        const game = docSnap.data();
+        boardState = [...game.boardState];
+        players = [...game.players];
+        currentPlayerId = game.currentPlayer;
+        timerSeconds = game.timerSeconds;
+        renderBoard(boardState);
+        renderPlayerNames(players, game.playerNames || {});
+        updateTimerDisplay();
+
+        // Timer logic
+        clearInterval(timerInterval);
+        timerActive = false;
+        if (game.status === 'playing' && currentUser.uid === currentPlayerId) {
+            startTurnTimer();
+        }
+        if (game.status === 'ended') {
+            timerDisplay.textContent = game.winner
+                ? `${game.playerNames[game.winner] || 'Opponent'} wins!`
+                : "It's a draw!";
+        }
+    });
+}
+
+// Board click handler (only updates Firestore)
+board.addEventListener('click', (event) => {
+    if (!timerActive || currentUser.uid !== currentPlayerId) return;
+    const el = event.target;
+    const index = getBoxIndex(el);
+    if (index === -1 || clickedBoxes.has(el)) return;
+
+    // Calculate next board state
+    const currentPlayerClass = (players.indexOf(currentUser.uid) === 0) ? 'player_1' : 'player_2';
+    let nextBoardState = [...boardState];
+    nextBoardState[index] = currentPlayerClass;
+
+    // (Optional: fill chains, etc. as in your logic...)
+
+    // Switch turn
+    const nextPlayerIndex = (players.indexOf(currentUser.uid) + 1) % players.length;
+    const nextPlayerId = players[nextPlayerIndex];
+
+    // Update Firestore only
+    const gameRef = doc(db, 'games', currentGameId);
+    updateDoc(gameRef, {
+        boardState: nextBoardState,
+        currentPlayer: nextPlayerId,
+        timerSeconds: 15
+    });
+    // Do NOT update UI here—wait for Firestore snapshot!
+});
