@@ -101,7 +101,7 @@ function renderBoard(boardState) {
     }
 }
 
-function renderPlayerNames(players) {
+function renderPlayerNames(players, playerNames) {
     const container = document.getElementById('player-names-container');
     if (!container) return;
 
@@ -110,10 +110,10 @@ function renderPlayerNames(players) {
     players.forEach((uid, idx) => {
         const playerClass = idx === 0 ? 'player_1' : 'player_2';
         const score = boardState.filter(cell => cell === playerClass).length;
+        const name = playerNames && playerNames[uid] ? playerNames[uid] : `Player ${idx + 1}`;
 
-        // Only show score number
         const span = document.createElement('span');
-        span.textContent = score;
+        span.textContent = `${name} ${score}`; // Name before score
         span.classList.add('player-name', playerClass);
 
         if (currentPlayerId === uid) {
@@ -326,7 +326,7 @@ function joinGame(gameId) {
                 playerNamesContainer.appendChild(div);
             });
 
-            renderPlayerNames(players); // Call the new function here
+            renderPlayerNames(players, gameData.playerNames); // Call the new function here
         }
     });
 }
