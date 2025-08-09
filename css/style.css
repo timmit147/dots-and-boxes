@@ -4,9 +4,14 @@ body{
     display: flex;
         align-items: center;
         flex-direction: column;
+            font-family: sans-serif;
   }
 
   p{
+    margin: 0;
+  }
+
+  h2{
     margin: 0;
   }
 
@@ -22,10 +27,17 @@ body{
 #game-lobby-container {
     flex-direction: column;
     width: 100%;
+    gap: 10px;
 }
 
-div#auth-container {
+#auth-container {
     gap: 10px;
+    flex-direction: column;
+}
+
+#game-container {
+    width: 100%;
+    justify-content: space-between;
 }
 
 .board {

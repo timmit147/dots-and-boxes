@@ -270,7 +270,8 @@ joinGameButton.addEventListener('click', async () => {
 
 function joinGame(gameId) {
     gameLobbyContainer.style.display = 'none';
-    gameContainer.style.display = 'flex';
+    // The main change: Show the game container
+    gameContainer.style.display = 'flex'; 
     currentGameIdSpan.textContent = gameId;
     setGridLayout();
 
@@ -297,6 +298,7 @@ leaveGameButton.addEventListener('click', () => {
     if (unsubscribeFromGame) unsubscribeFromGame();
     currentGameId = null;
     gameLobbyContainer.style.display = 'flex';
+    // The main change: Hide the game container
     gameContainer.style.display = 'none';
 });
 
