@@ -85,24 +85,28 @@ body{
     padding: 20px;
     display: flex;
     gap: 30px;
-    justify-content: center;
 }
 
 .player-name {
-    font-weight: bold;
-    padding: 5px 15px;
-    border-radius: 8px;
     transition: border-bottom 0.2s;
 }
 
 .player-name.player_1 {
     color: #1976d2; /* Example: blue for player 1 */
+    background-color: unset;
 }
 
 .player-name.player_2 {
     color: #d32f2f; /* Example: red for player 2 */
+    background-color: unset;
 }
 
-.player-name.your-turn {
-    border-bottom: 2px solid #333;
+.player-name.player_1.your-turn {
+    border-bottom: 2px solid #1976d2;
+    padding-bottom: 4px;
+}
+
+.player-name.player_2.your-turn {
+    border-bottom: 2px solid #d32f2f;
+    padding-bottom: 4px;
 }
