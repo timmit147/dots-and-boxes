@@ -459,9 +459,6 @@ startGameButton.addEventListener('click', async () => {
         lobbyStatus.textContent = "Error finding opponent. Please try again.";
     }
 });
-        }
-    });
-});
 
 function joinGame(gameId) {
     gameLobbyContainer.style.display = 'none';
