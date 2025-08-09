@@ -85,7 +85,7 @@ input{
 }
 
 #leave-game-button {
-    background-image: url(/assets/angle.svg);
+    background-image: url("../assets/angle.svg");
     height: 15px;
     aspect-ratio: 1;
     background-color: unset;
