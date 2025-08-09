@@ -492,3 +492,54 @@ board.addEventListener('click', (event) => {
         currentPlayer: nextPlayerId
     });
 });
+
+function endGame(finalBoardState) {
+    gameEnded = true;
+    clearInterval(timerInterval);
+    timerActive = false;
+
+    // Count scores
+    const player1Score = finalBoardState.filter(cell => cell === 'player_1').length;
+    const player2Score = finalBoardState.filter(cell => cell === 'player_2').length;
+
+    // Get player names
+    let winnerText = '';
+    let playerNames = {};
+    if (players.length === 2 && window.currentGameId) {
+        // Try to get playerNames from Firestore
+        const gameRef = doc(db, 'games', window.currentGameId);
+        getDoc(gameRef).then((docSnap) => {
+            if (docSnap.exists()) {
+                playerNames = docSnap.data().playerNames || {};
+                let winnerName = '';
+                if (player1Score > player2Score) {
+                    winnerName = playerNames[players[0]] || 'Player 1';
+                } else if (player2Score > player1Score) {
+                    winnerName = playerNames[players[1]] || 'Player 2';
+                }
+                if (player1Score === player2Score) {
+                    winnerText = "It's a draw!";
+                } else {
+                    winnerText = `${winnerName} wins!`;
+                }
+                const timerContainer = document.getElementById('timer-container');
+                if (timerContainer) {
+                    timerContainer.textContent = winnerText;
+                }
+            }
+        });
+    } else {
+        // Fallback if playerNames not available
+        if (player1Score > player2Score) {
+            winnerText = 'Player 1 wins!';
+        } else if (player2Score > player1Score) {
+            winnerText = 'Player 2 wins!';
+        } else {
+            winnerText = "It's a draw!";
+        }
+        const timerContainer = document.getElementById('timer-container');
+        if (timerContainer) {
+            timerContainer.textContent = winnerText;
+        }
+    }
+}
