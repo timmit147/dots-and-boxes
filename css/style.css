@@ -17,28 +17,26 @@ body{
     margin: 0;
   }
 
-  header {
-    padding: 20px;
-    width: 100%;
-        box-sizing: border-box;
-    align-content: center;
-    justify-items: center;
-}
-
 #game-lobby-container {
-    flex-direction: column;
-    width: 100%;
+        flex-direction: column;
     gap: 10px;
+    height: 100%;
+    justify-content: center;
 }
 
 #auth-container {
     gap: 10px;
     flex-direction: column;
+    height: 100%;
+    justify-content: center;
+    display: flex;
 }
 
 #game-container {
     width: 100%;
     justify-content: space-between;
+    padding: 20px;
+    box-sizing: border-box;
 }
 
 .board {
@@ -56,7 +54,6 @@ body{
     aspect-ratio: 1;
     display: grid;
     grid-gap: 0;
-    display: none;
 }
 
 .box{
