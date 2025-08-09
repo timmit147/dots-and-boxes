@@ -1,6 +1,6 @@
 // Firebase configuration and initialization
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -26,6 +26,7 @@ const passwordInput = document.getElementById('password');
 const signupButton = document.getElementById('signup-button');
 const signinButton = document.getElementById('signin-button');
 const signoutButton = document.getElementById('signout-button');
+const guestLoginButton = document.getElementById('guest-login-button'); // New element for guest login
 const authStatus = document.getElementById('auth-status');
 const createGameButton = document.getElementById('create-game-button');
 const joinGameButton = document.getElementById('join-game-button');
@@ -182,6 +183,17 @@ signinButton.addEventListener('click', () => {
         });
 });
 
+// New event listener for guest login
+guestLoginButton.addEventListener('click', () => {
+    signInAnonymously(auth)
+        .then(() => {
+            authStatus.textContent = "Signed in as a guest!";
+        })
+        .catch((error) => {
+            authStatus.textContent = `Guest Sign In Error: ${error.message}`;
+        });
+});
+
 signoutButton.addEventListener('click', () => {
     signOut(auth).then(() => {
         authStatus.textContent = 'User signed out.';
@@ -195,6 +207,12 @@ onAuthStateChanged(auth, (user) => {
         currentUser = user;
         authContainer.style.display = 'none';
         gameLobbyContainer.style.display = 'block';
+        // Optional: Differentiate UI for guest users
+        if (user.isAnonymous) {
+            authStatus.textContent = "You are logged in as a guest. Your game progress will not be saved.";
+        } else {
+            authStatus.textContent = `Welcome, ${user.email}!`;
+        }
     } else {
         currentUser = null;
         authContainer.style.display = 'block';
