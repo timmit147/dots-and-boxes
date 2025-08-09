@@ -32,6 +32,8 @@ const lobbyStatus = document.getElementById('lobby-status');
 const currentGameIdSpan = document.getElementById('current-game-id');
 const leaveGameButton = document.getElementById('leave-game-button');
 const startGameButton = document.getElementById('start-game-button'); // New element for start game
+const timerDisplay = document.getElementById('timer-container');
+const playerNamesContainer = document.getElementById('player-names-container');
 
 // Game state variables
 const rows = 10;
@@ -185,6 +187,21 @@ function findAndFillChain(startBox, previousBox, playerClass, state) {
         });
     }
     return nextBoardState;
+}
+
+// Function to render player names
+function renderPlayerNames(players, playerNames) {
+    if (!playerNamesContainer) return;
+    
+    playerNamesContainer.innerHTML = '';
+    players.forEach((playerId, index) => {
+        const playerDiv = document.createElement('div');
+        playerDiv.className = `player player_${index + 1}`;
+        const name = playerNames[playerId] || `Player ${index + 1}`;
+        const isCurrentPlayer = playerId === currentPlayerId;
+        playerDiv.innerHTML = `${name}${isCurrentPlayer ? ' (Current Turn)' : ''}`;
+        playerNamesContainer.appendChild(playerDiv);
+    });
 }
 
 // --- Event Listeners ---
