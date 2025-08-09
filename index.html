@@ -27,6 +27,7 @@
     <div id="game-container" style="display:none;">
         <h2>Game Board</h2>
         <p>You are in game: <span id="current-game-id"></span></p>
+        <p>Current Turn: <span id="current-player-turn"></span></p>
         <div class="board"></div>
         <button id="leave-game-button">Leave Game</button>
     </div>
@@ -34,10 +35,10 @@
     <script src="js/script.js"></script>
 
     <script type="module">
-        // Import the functions you need from the SDKs you need
+        // Import Firebase SDKs
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
         // Your web app's Firebase configuration
         const firebaseConfig = {
@@ -70,9 +71,11 @@
         const lobbyStatus = document.getElementById('lobby-status');
         const currentGameIdSpan = document.getElementById('current-game-id');
         const leaveGameButton = document.getElementById('leave-game-button');
+        const currentPlayerTurnSpan = document.getElementById('current-player-turn');
         
         let currentUser = null;
         let currentGameId = null;
+        let unsubscribeFromGame = null; // To stop listening to Firestore updates
 
         // --- AUTHENTICATION LOGIC ---
         signupButton.addEventListener('click', () => {
@@ -125,27 +128,25 @@
         });
 
         // --- GAME LOBBY LOGIC ---
-
-        // Create a new game
         createGameButton.addEventListener('click', async () => {
             if (!currentUser) {
                 lobbyStatus.textContent = "Please sign in first.";
                 return;
             }
 
-            const gameId = Math.random().toString(36).substring(2, 8); // Simple unique ID
+            const gameId = Math.random().toString(36).substring(2, 8);
             const gameRef = doc(db, 'games', gameId);
 
             await setDoc(gameRef, {
                 players: [currentUser.uid],
-                status: 'waiting'
+                status: 'waiting',
+                boardState: Array(100).fill(null) // Initialize an empty board
             });
 
             currentGameId = gameId;
             joinGame(gameId);
         });
 
-        // Join an existing game
         joinGameButton.addEventListener('click', async () => {
             if (!currentUser) {
                 lobbyStatus.textContent = "Please sign in first.";
@@ -163,9 +164,11 @@
 
             if (gameSnap.exists()) {
                 const gameData = gameSnap.data();
-                if (gameData.players.length < 2) { // Limit to 2 players
+                if (gameData.players.length < 2) {
                     await updateDoc(gameRef, {
-                        players: [...gameData.players, currentUser.uid]
+                        players: [...gameData.players, currentUser.uid],
+                        status: 'playing',
+                        currentPlayer: currentUser.uid // Set the second player as the starting player
                     });
                     currentGameId = gameId;
                     joinGame(gameId);
@@ -177,20 +180,43 @@
             }
         });
 
-        // Function to switch to the game view
         function joinGame(gameId) {
             gameLobbyContainer.style.display = 'none';
             gameContainer.style.display = 'block';
             currentGameIdSpan.textContent = gameId;
+
+            const gameRef = doc(db, 'games', gameId);
+
+            // Listen for real-time updates to the game document
+            unsubscribeFromGame = onSnapshot(gameRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const gameData = docSnap.data();
+                    
+                    // Update the turn display
+                    if (gameData.currentPlayer) {
+                        currentPlayerTurnSpan.textContent = (gameData.currentPlayer === currentUser.uid) ? 'Your Turn' : 'Opponent\'s Turn';
+                    }
+                    
+                    // Here you would also update the game board based on gameData.boardState
+                    // For now, let's just log it.
+                    console.log('Current board state:', gameData.boardState);
+                }
+            });
         }
 
-        // Handle leaving the game
         leaveGameButton.addEventListener('click', () => {
-            // Logic to remove player from Firestore game document (optional)
+            // Stop listening to game updates
+            if (unsubscribeFromGame) {
+                unsubscribeFromGame();
+            }
             currentGameId = null;
             gameLobbyContainer.style.display = 'block';
             gameContainer.style.display = 'none';
         });
+
+        // --- GAME LOGIC ---
+        // (This will be integrated from your existing script.js file)
+        
     </script>
 </body>
 </html>
