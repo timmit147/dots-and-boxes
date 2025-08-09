@@ -24,16 +24,25 @@
                 <p id="lobby-status"></p>
                 <button id="signout-button">Sign Out</button>
             </div>
+            
+            <div id="game-container" style="display:none;">
+                <h2>Game Board</h2>
+                <p>You are in game: <span id="current-game-id"></span></p>
+                <p>Current Turn: <span id="current-player-turn"></span></p>
+                <button id="leave-game-button">Leave Game</button>
+            </div>
         </header>
     
 
-    <div id="game-container" style="display:none;">
-        <h2>Game Board</h2>
-        <p>You are in game: <span id="current-game-id"></span></p>
-        <p>Current Turn: <span id="current-player-turn"></span></p>
-        <div class="board"></div>
-        <button id="leave-game-button">Leave Game</button>
-    </div>
+
+        <div class="board">
+
+        </div>
+
+        <footer>
+            
+        </footer>
+
     
     <script type="module" src="js/script.js"></script>
 </body>

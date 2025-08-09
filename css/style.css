@@ -1,20 +1,25 @@
 body{
     background-color:#9bd1f7;
+    margin: 0;
+    display: flex;
   }
+
 .board {
     width: 90vw;
     height: 90vw;
-    position: fixed;
+    position: relative;
     justify-self: center;
     position-area: center;
-     display: grid;
-grid-gap: 0;
+    display: grid;
+    grid-gap: 0;
 }
+
 .box{
-background-color:white;
+    background-color:white;
 }
+
 .even{
-        background-color:#9bd1f7;
+    background-color:#9bd1f7;
 }
 
 .player_1{
