@@ -286,8 +286,14 @@ joinGameButton.addEventListener('click', async () => {
     if (gameSnap.exists()) {
         const gameData = gameSnap.data();
         if (gameData.players.length < 2) {
+            // Get display name for joining player
+            let name = currentUser.isAnonymous
+                ? "Guest" + Math.floor(1000 + Math.random() * 9000)
+                : currentUser.email.split('@')[0];
+
             await updateDoc(gameRef, {
                 players: [...gameData.players, currentUser.uid],
+                playerNames: { ...gameData.playerNames, [currentUser.uid]: name }, // <-- Add this line
                 status: 'playing',
                 currentPlayer: gameData.players[0]
             });
