@@ -1,7 +1,7 @@
 // Firebase configuration and initialization
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot, query, collection, where, getDocs } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyCQh3iNGIGDVaFTmiEGyZa6r5r7U0thX80",
@@ -28,11 +28,14 @@ const signinButton = document.getElementById('signin-button');
 const signoutButton = document.getElementById('signout-button');
 const guestLoginButton = document.getElementById('guest-login-button'); // New element for guest login
 const authStatus = document.getElementById('auth-status');
+const createGameButton = document.getElementById('create-game-button');
+const joinGameButton = document.getElementById('join-game-button');
+const gameIdInput = document.getElementById('game-id-input');
 const lobbyStatus = document.getElementById('lobby-status');
 const currentGameIdSpan = document.getElementById('current-game-id');
 const leaveGameButton = document.getElementById('leave-game-button');
 const currentPlayerTurnSpan = document.getElementById('current-player-turn');
-const playerNamesContainer = document.getElementById('player-names-container'); // New element for player names
+const timerDisplay = document.getElementById('timer-display'); // New element for timer display
 
 // Game state variables
 const rows = 10;
@@ -44,11 +47,10 @@ let currentUser = null;
 let currentGameId = null;
 let unsubscribeFromGame = null;
 let boardState = Array(100).fill(null);
-let displayName = null;
 let timerInterval = null;
-let timerSeconds = 15;
 let timerActive = false;
-let gameEnded = false; // New variable to track if the game has ended
+let gameEnded = false;
+let timerSeconds = 15;
 
 // --- Board Rendering Logic ---
 function setGridLayout() {
@@ -102,76 +104,34 @@ function renderBoard(boardState) {
     }
 }
 
-function renderPlayerNames(players, playerNames) {
-    const container = document.getElementById('player-names-container');
-    if (!container) return;
-
-    container.innerHTML = '';
-
-    players.forEach((uid, idx) => {
-        // Only show actual player names
-        const playerClass = idx === 0 ? 'player_1' : 'player_2';
-        const score = boardState.filter(cell => cell === playerClass).length;
-        let name = playerNames && playerNames[uid] ? playerNames[uid] : '';
-        if (!name) return; // Skip if no name
-
-        if (currentUser && currentUser.uid === uid) {
-            name = `(you) ${name}`;
-        }
-
-        const span = document.createElement('span');
-        span.textContent = `${name} ${score}`;
-        span.classList.add('player-name', playerClass);
-
-        if (currentPlayerId === uid) {
-            span.classList.add('your-turn');
-        }
-
-        container.appendChild(span);
-    });
+// --- Timer Logic ---
+function updateTimerDisplay() {
+    const minutes = Math.floor(timerSeconds / 60);
+    const seconds = timerSeconds % 60;
+    timerDisplay.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 
 function startTurnTimer() {
-    clearInterval(timerInterval);
-    timerSeconds = 15;
     timerActive = true;
-    updateTimerDisplay();
-
     timerInterval = setInterval(() => {
         timerSeconds--;
         updateTimerDisplay();
+
         if (timerSeconds <= 0) {
             clearInterval(timerInterval);
             timerActive = false;
-            showTimeoutWin();
+            // Handle timer end: auto-play or pass turn
+            const currentPlayerIndex = players.indexOf(currentUser.uid);
+            const nextPlayerIndex = (currentPlayerIndex + 1) % players.length;
+            const nextPlayerId = players[nextPlayerIndex];
+
+            const gameRef = doc(db, 'games', currentGameId);
+            updateDoc(gameRef, {
+                currentPlayer: nextPlayerId,
+                timerSeconds: 15 // Reset timer for next player
+            });
         }
     }, 1000);
-}
-
-function updateTimerDisplay() {
-    const timerContainer = document.getElementById('timer-container');
-    if (timerContainer) {
-        timerContainer.textContent = `Time left: ${timerSeconds}s`;
-    }
-}
-
-async function showTimeoutWin() {
-    gameEnded = true;
-    clearInterval(timerInterval);
-    timerActive = false;
-
-    // Determine winner (opponent)
-    const opponentIdx = players[0] === currentUser.uid ? 1 : 0;
-    const winnerId = players[opponentIdx];
-
-    // Update Firestore
-    if (currentGameId) {
-        const gameRef = doc(db, 'games', currentGameId);
-        await updateDoc(gameRef, {
-            status: 'ended',
-            winner: winnerId
-        });
-    }
 }
 
 // --- Game Logic ---
@@ -296,77 +256,96 @@ onAuthStateChanged(auth, (user) => {
     }
 });
 
+createGameButton.addEventListener('click', async () => {
+    if (!currentUser) {
+        lobbyStatus.textContent = "Please sign in first.";
+        return;
+    }
+    const gameId = Math.random().toString(36).substring(2, 8);
+    const gameRef = doc(db, 'games', gameId);
+    await setDoc(gameRef, {
+        players: [currentUser.uid],
+        status: 'waiting',
+        boardState: Array(100).fill(null)
+    });
+    currentGameId = gameId;
+    joinGame(gameId);
+});
+
+joinGameButton.addEventListener('click', async () => {
+    if (!currentUser) {
+        lobbyStatus.textContent = "Please sign in first.";
+        return;
+    }
+    const gameId = gameIdInput.value.trim();
+    if (!gameId) {
+        lobbyStatus.textContent = "Please enter a Game ID.";
+        return;
+    }
+    const gameRef = doc(db, 'games', gameId);
+    const gameSnap = await getDoc(gameRef);
+
+    if (gameSnap.exists()) {
+        const gameData = gameSnap.data();
+        if (gameData.players.length < 2) {
+            await updateDoc(gameRef, {
+                players: [...gameData.players, currentUser.uid],
+                status: 'playing',
+                currentPlayer: gameData.players[0]
+            });
+            currentGameId = gameId;
+            joinGame(gameId);
+        } else {
+            lobbyStatus.textContent = "This game is already full.";
+        }
+    } else {
+        lobbyStatus.textContent = "Game not found.";
+    }
+});
+
+function joinGame(gameId) {
+    gameLobbyContainer.style.display = 'none';
+    // The main change: Show the game container
+    gameContainer.style.display = 'flex'; 
+    currentGameIdSpan.textContent = gameId;
+    setGridLayout();
+
+    const gameRef = doc(db, 'games', gameId);
+    if (unsubscribeFromGame) unsubscribeFromGame();
+
+    unsubscribeFromGame = onSnapshot(gameRef, (docSnap) => {
+        if (docSnap.exists()) {
+            const gameData = docSnap.data();
+            boardState = gameData.boardState;
+            players = gameData.players;
+            currentPlayerId = gameData.currentPlayer;
+            timerSeconds = typeof gameData.timerSeconds === 'number' ? gameData.timerSeconds : 15;
+
+            renderBoard(boardState);
+
+            // Always display timer from Firestore
+            updateTimerDisplay();
+
+            // Only start local timer if it's your turn and game not ended
+            if (!gameEnded && currentUser && currentUser.uid === currentPlayerId && !timerActive) {
+                startTurnTimer();
+            } else {
+                clearInterval(timerInterval);
+                timerActive = false;
+            }
+        }
+    });
+}
+
 leaveGameButton.addEventListener('click', () => {
     if (unsubscribeFromGame) unsubscribeFromGame();
     currentGameId = null;
     gameLobbyContainer.style.display = 'flex';
+    // The main change: Hide the game container
     gameContainer.style.display = 'none';
 });
 
-board.addEventListener('click', async (event) => {
-    if (gameEnded) return;
-
-    if (timerActive) {
-        clearInterval(timerInterval);
-        timerActive = false;
-        updateTimerDisplay();
-    }
-    const el = event.target;
-    const index = getBoxIndex(el);
-
-    if (index === -1 || clickedBoxes.has(el) || currentUser.uid !== currentPlayerId) {
-        return;
-    }
-
-    const currentPlayerClass = (players.indexOf(currentUser.uid) === 0) ? 'player_1' : 'player_2';
-    let nextBoardState = [...boardState];
-    nextBoardState[index] = currentPlayerClass;
-
-    const row = Math.floor(index / cols);
-    const col = index % cols;
-
-    getNeighbors(row, col).forEach(nb => {
-        const neighborIndex = getBoxIndex(nb);
-        if (nextBoardState[neighborIndex] === null) {
-            const unclickedCount = countUnclickedNeighbors(nb, el, nextBoardState);
-            if (unclickedCount === 0) {
-                nextBoardState[neighborIndex] = currentPlayerClass;
-            } else if (unclickedCount === 1) {
-                nextBoardState = findAndFillChain(nb, el, currentPlayerClass, nextBoardState);
-            }
-        }
-    });
-
-    const gameRef = doc(db, 'games', currentGameId);
-
-    // If all boxes are filled, update Firestore and let the snapshot listener handle endGame
-    if (nextBoardState.every(cell => cell !== null)) {
-        await updateDoc(gameRef, {
-            boardState: nextBoardState
-        });
-        // Do NOT call endGame here!
-        return;
-    }
-
-    const currentPlayerIndex = players.indexOf(currentUser.uid);
-    const nextPlayerIndex = (currentPlayerIndex + 1) % players.length;
-    const nextPlayerId = players[nextPlayerIndex];
-
-    await updateDoc(gameRef, {
-        boardState: nextBoardState,
-        currentPlayer: nextPlayerId
-    });
-});
-
-// Stop timer when user clicks a square
 board.addEventListener('click', (event) => {
-    if (gameEnded) return; // Prevent moves after game ends
-
-    if (timerActive) {
-        clearInterval(timerInterval);
-        timerActive = false;
-        updateTimerDisplay();
-    }
     const el = event.target;
     const index = getBoxIndex(el);
 
@@ -395,12 +374,6 @@ board.addEventListener('click', (event) => {
         }
     });
 
-    // Check if game should end
-    if (nextBoardState.every(cell => cell !== null)) {
-        endGame(nextBoardState);
-        return;
-    }
-
     const currentPlayerIndex = players.indexOf(currentUser.uid);
     const nextPlayerIndex = (currentPlayerIndex + 1) % players.length;
     const nextPlayerId = players[nextPlayerIndex];
@@ -411,142 +384,3 @@ board.addEventListener('click', (event) => {
         currentPlayer: nextPlayerId
     });
 });
-
-async function endGame(finalBoardState) {
-    gameEnded = true;
-    clearInterval(timerInterval);
-    timerActive = false;
-
-    // Count scores
-    const player1Score = finalBoardState.filter(cell => cell === 'player_1').length;
-    const player2Score = finalBoardState.filter(cell => cell === 'player_2').length;
-    let winnerId = null;
-    if (player1Score > player2Score) {
-        winnerId = players[0];
-    } else if (player2Score > player1Score) {
-        winnerId = players[1];
-    }
-
-    // Update Firestore
-    if (currentGameId) {
-        const gameRef = doc(db, 'games', currentGameId);
-        await updateDoc(gameRef, {
-            status: 'ended',
-            winner: winnerId
-        });
-    }
-}
-
-const startGameButton = document.getElementById('start-game-button');
-
-startGameButton.addEventListener('click', async () => {
-    if (!currentUser) {
-        lobbyStatus.textContent = "Please sign in first.";
-        return;
-    }
-
-    lobbyStatus.textContent = "Searching for open games...";
-
-    let joined = false;
-    let name = currentUser.isAnonymous
-        ? "Guest" + Math.floor(1000 + Math.random() * 9000)
-        : currentUser.email.split('@')[0];
-
-    // Try to join an open game for up to 5 seconds
-    const searchStart = Date.now();
-    while (Date.now() - searchStart < 5000) {
-        const gamesQuery = query(
-            collection(db, 'games'),
-            where('status', '==', 'open')
-        );
-        const querySnapshot = await getDocs(gamesQuery);
-
-        for (const gameDoc of querySnapshot.docs) {
-            const gameData = gameDoc.data();
-            if (
-                Array.isArray(gameData.players) &&
-                gameData.players.length === 1 &&
-                gameData.players[0] !== currentUser.uid
-            ) {
-                await updateDoc(gameDoc.ref, {
-                    players: [...gameData.players, currentUser.uid],
-                    playerNames: { ...gameData.playerNames, [currentUser.uid]: name },
-                    status: 'playing',
-                    currentPlayer: gameData.players[0]
-                });
-                currentGameId = gameDoc.id;
-                joinGame(gameDoc.id);
-                joined = true;
-                break;
-            }
-        }
-
-        if (joined) break;
-        // Wait 500ms before checking again
-        await new Promise(res => setTimeout(res, 500));
-    }
-
-    // Only create a new game if NOT joined after 5 seconds
-    if (!joined) {
-        lobbyStatus.textContent = "No open games found. Creating a new game...";
-        const gameId = Math.floor(100000 + Math.random() * 900000).toString();
-        const gameRef = doc(db, 'games', gameId);
-
-        await setDoc(gameRef, {
-            players: [currentUser.uid],
-            playerNames: { [currentUser.uid]: name },
-            status: 'open',
-            boardState: Array(100).fill(null)
-        });
-        currentGameId = gameId;
-        joinGame(gameId);
-    }
-});
-
-function joinGame(gameId) {
-    gameLobbyContainer.style.display = 'none';
-    gameContainer.style.display = 'flex';
-    currentGameIdSpan.textContent = gameId;
-    setGridLayout();
-
-    const gameRef = doc(db, 'games', gameId);
-    if (unsubscribeFromGame) unsubscribeFromGame();
-
-    unsubscribeFromGame = onSnapshot(gameRef, (docSnap) => {
-        if (docSnap.exists()) {
-            const gameData = docSnap.data();
-            boardState = gameData.boardState;
-            players = gameData.players;
-            currentPlayerId = gameData.currentPlayer;
-            const playerNames = gameData.playerNames || {};
-            const winner = gameData.winner;
-            const status = gameData.status;
-            timerSeconds = typeof gameData.timerSeconds === 'number' ? gameData.timerSeconds : 15;
-
-            renderBoard(boardState);
-            renderPlayerNames(players, playerNames);
-
-            const timerContainer = document.getElementById('timer-container');
-
-            // Show winner message if game is ended
-            if (status === 'ended') {
-                gameEnded = true;
-                clearInterval(timerInterval);
-                timerActive = false;
-
-                if (winner) {
-                    const winnerName = playerNames[winner] || 'Opponent';
-                    timerContainer.textContent = `${winnerName} wins!`;
-                } else {
-                    timerContainer.textContent = "It's a draw!";
-                }
-                return;
-            }
-
-            // Always start local timer for both clients
-            startLocalTimer(timerSeconds);
-
-            updateTimerDisplay();
-        }
-    });
-}
