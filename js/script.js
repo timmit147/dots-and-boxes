@@ -160,16 +160,13 @@ async function showTimeoutWin() {
     clearInterval(timerInterval);
     timerActive = false;
 
-    const timerContainer = document.getElementById('timer-container');
-    if (timerContainer) {
-        timerContainer.textContent = "Time's up! Opponent wins!";
-    }
+    // Determine winner (opponent)
+    const opponentIdx = players[0] === currentUser.uid ? 1 : 0;
+    const winnerId = players[opponentIdx];
 
+    // Update Firestore
     if (currentGameId) {
         const gameRef = doc(db, 'games', currentGameId);
-        const opponentIdx = players[0] === currentUser.uid ? 1 : 0;
-        const winnerId = players[opponentIdx];
-
         await updateDoc(gameRef, {
             status: 'ended',
             winner: winnerId
@@ -415,7 +412,7 @@ board.addEventListener('click', (event) => {
     });
 });
 
-function endGame(finalBoardState, isTimeout = false) {
+async function endGame(finalBoardState) {
     gameEnded = true;
     clearInterval(timerInterval);
     timerActive = false;
@@ -423,50 +420,20 @@ function endGame(finalBoardState, isTimeout = false) {
     // Count scores
     const player1Score = finalBoardState.filter(cell => cell === 'player_1').length;
     const player2Score = finalBoardState.filter(cell => cell === 'player_2').length;
+    let winnerId = null;
+    if (player1Score > player2Score) {
+        winnerId = players[0];
+    } else if (player2Score > player1Score) {
+        winnerId = players[1];
+    }
 
-    // Get player names
-    let winnerText = '';
-    let playerNames = {};
-    const timerContainer = document.getElementById('timer-container');
-
-    // Get names from Firestore
-    if (players.length === 2 && currentGameId) {
+    // Update Firestore
+    if (currentGameId) {
         const gameRef = doc(db, 'games', currentGameId);
-        getDoc(gameRef).then((docSnap) => {
-            if (docSnap.exists()) {
-                playerNames = docSnap.data().playerNames || {};
-                let winnerName = '';
-                if (isTimeout) {
-                    // On timeout, opponent wins
-                    const opponentIdx = players[0] === currentUser.uid ? 1 : 0;
-                    winnerName = playerNames[players[opponentIdx]] || `Player ${opponentIdx + 1}`;
-                    winnerText = `Time's up! ${winnerName} wins!`;
-                } else {
-                    if (player1Score > player2Score) {
-                        winnerName = playerNames[players[0]] || 'Player 1';
-                        winnerText = `${winnerName} wins!`;
-                    } else if (player2Score > player1Score) {
-                        winnerName = playerNames[players[1]] || 'Player 2';
-                        winnerText = `${winnerName} wins!`;
-                    } else {
-                        winnerText = "It's a draw!";
-                    }
-                }
-                if (timerContainer) timerContainer.textContent = winnerText;
-            }
+        await updateDoc(gameRef, {
+            status: 'ended',
+            winner: winnerId
         });
-    } else {
-        // Fallback if playerNames not available
-        if (isTimeout) {
-            winnerText = "Time's up! Opponent wins!";
-        } else if (player1Score > player2Score) {
-            winnerText = 'Player 1 wins!';
-        } else if (player2Score > player1Score) {
-            winnerText = 'Player 2 wins!';
-        } else {
-            winnerText = "It's a draw!";
-        }
-        if (timerContainer) timerContainer.textContent = winnerText;
     }
 }
 
