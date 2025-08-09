@@ -326,7 +326,15 @@ board.addEventListener('click', (event) => {
         updateDoc(gameRef, {
             boardState: nextBoardState,
             currentPlayer: nextPlayerId,
-            timerSeconds: 15 // <-- Reset timer for both players every turn
+            timerSeconds: 15, // <-- Reset timer for both players every turn
+            lastUpdate: Date.now() // Add timestamp for sync verification
+        }).catch(error => {
+            console.error('Failed to update game:', error);
+            // Re-enable clicks if update fails
+            if (currentUser.uid === currentPlayerId) {
+                timerActive = true;
+                startTurnTimer();
+            }
         });
     }
 });
@@ -377,17 +385,19 @@ startGameButton.addEventListener('click', async () => {
 
                 const opponentName = "Guest" + Math.floor(1000 + Math.random() * 9000);
 
-                // Create the game
+                // Create the game with sorted players array
+                const sortedPlayers = [waitingPlayerId, currentUser.uid].sort();
                 await setDoc(gameRef, {
-                    players: [waitingPlayerId, currentUser.uid],
+                    players: sortedPlayers,
                     playerNames: { 
                         [waitingPlayerId]: opponentName,
                         [currentUser.uid]: myName 
                     },
                     status: 'playing',
                     boardState: Array(100).fill(null),
-                    currentPlayer: waitingPlayerId,
-                    timerSeconds: 15
+                    currentPlayer: sortedPlayers[0],
+                    timerSeconds: 15,
+                    lastUpdate: Date.now() // Add timestamp for sync verification
                 });
 
                 // Clean up the match document
@@ -426,16 +436,18 @@ startGameButton.addEventListener('click', async () => {
 
                     const opponentName = "Guest" + Math.floor(1000 + Math.random() * 9000);
 
+                    const sortedPlayers = [currentUser.uid, opponentUid].sort();
                     await setDoc(gameRef, {
-                        players: [currentUser.uid, opponentUid],
+                        players: sortedPlayers,
                         playerNames: {
                             [currentUser.uid]: myName,
                             [opponentUid]: opponentName
                         },
                         status: 'playing',
                         boardState: Array(100).fill(null),
-                        currentPlayer: currentUser.uid,
-                        timerSeconds: 15
+                        currentPlayer: sortedPlayers[0],
+                        timerSeconds: 15,
+                        lastUpdate: Date.now() // Add timestamp for sync verification
                     });
 
                     // Clean up
@@ -475,15 +487,22 @@ function joinGame(gameId) {
     gameContainer.style.display = 'flex';
     setGridLayout();
 
+    // Clear any existing game state
+    clearInterval(timerInterval);
+    timerActive = false;
+    gameEnded = false;
+    clickedBoxes.clear();
+    
     const gameRef = doc(db, 'games', gameId);
     if (unsubscribeFromGame) unsubscribeFromGame();
 
     let lastPlayerId = null;
-    unsubscribeFromGame = onSnapshot(gameRef, (docSnap) => {
+    unsubscribeFromGame = onSnapshot(gameRef, async (docSnap) => {
         if (docSnap.exists()) {
             const gameData = docSnap.data();
-            boardState = gameData.boardState;
-            players = gameData.players;
+            // Always use Firestore data, never local state
+            boardState = [...gameData.boardState];
+            players = [...gameData.players].sort(); // Sort for consistency
             const playerNames = gameData.playerNames || {};
             timerSeconds = typeof gameData.timerSeconds === 'number' ? gameData.timerSeconds : 15;
             const timerContainer = document.getElementById('timer-container');
