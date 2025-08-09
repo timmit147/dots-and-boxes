@@ -385,8 +385,8 @@ leaveGameButton.addEventListener('click', () => {
     gameContainer.style.display = 'none';
 });
 
-board.addEventListener('click', (event) => {
-    if (gameEnded) return; // Prevent moves after game ends
+board.addEventListener('click', async (event) => {
+    if (gameEnded) return;
 
     if (timerActive) {
         clearInterval(timerInterval);
@@ -401,7 +401,6 @@ board.addEventListener('click', (event) => {
     }
 
     const currentPlayerClass = (players.indexOf(currentUser.uid) === 0) ? 'player_1' : 'player_2';
-    
     let nextBoardState = [...boardState];
     nextBoardState[index] = currentPlayerClass;
 
@@ -412,7 +411,6 @@ board.addEventListener('click', (event) => {
         const neighborIndex = getBoxIndex(nb);
         if (nextBoardState[neighborIndex] === null) {
             const unclickedCount = countUnclickedNeighbors(nb, el, nextBoardState);
-            
             if (unclickedCount === 0) {
                 nextBoardState[neighborIndex] = currentPlayerClass;
             } else if (unclickedCount === 1) {
@@ -421,9 +419,14 @@ board.addEventListener('click', (event) => {
         }
     });
 
-    // Check if game should end
+    const gameRef = doc(db, 'games', currentGameId);
+
+    // If all boxes are filled, update Firestore and let the snapshot listener handle endGame
     if (nextBoardState.every(cell => cell !== null)) {
-        endGame(nextBoardState);
+        await updateDoc(gameRef, {
+            boardState: nextBoardState
+        });
+        // Do NOT call endGame here!
         return;
     }
 
@@ -431,8 +434,7 @@ board.addEventListener('click', (event) => {
     const nextPlayerIndex = (currentPlayerIndex + 1) % players.length;
     const nextPlayerId = players[nextPlayerIndex];
 
-    const gameRef = doc(db, 'games', currentGameId);
-    updateDoc(gameRef, {
+    await updateDoc(gameRef, {
         boardState: nextBoardState,
         currentPlayer: nextPlayerId
     });
