@@ -35,6 +35,7 @@ const lobbyStatus = document.getElementById('lobby-status');
 const currentGameIdSpan = document.getElementById('current-game-id');
 const leaveGameButton = document.getElementById('leave-game-button');
 const currentPlayerTurnSpan = document.getElementById('current-player-turn');
+const playerNamesContainer = document.getElementById('player-names-container'); // New element for player names
 
 // Game state variables
 const rows = 10;
@@ -97,6 +98,32 @@ function renderBoard(boardState) {
             clickedBoxes.add(boxes[i]);
         }
     }
+}
+
+function renderPlayerNames(players) {
+    const container = document.getElementById('player-names-container');
+    if (!container) return;
+
+    // Fetch user info for each player (email or "Guest")
+    Promise.all(players.map(async (uid, idx) => {
+        // Try to get user info from Firebase Auth
+        try {
+            // Firebase Auth does not allow fetching arbitrary user info client-side for security.
+            // So we show "Player 1" and "Player 2" or "Guest" if anonymous.
+            const isCurrent = currentUser && currentUser.uid === uid;
+            let label = `Player ${idx + 1}`;
+            if (isCurrent && currentUser.isAnonymous) {
+                label += " (Guest)";
+            } else if (isCurrent && currentUser.email) {
+                label += ` (${currentUser.email})`;
+            }
+            return `<span>${label}</span>`;
+        } catch {
+            return `<span>Player ${idx + 1}</span>`;
+        }
+    })).then(names => {
+        container.innerHTML = names.join(' &nbsp; ');
+    });
 }
 
 // --- Game Logic ---
@@ -290,6 +317,17 @@ function joinGame(gameId) {
             if (gameData.currentPlayer) {
                 currentPlayerTurnSpan.textContent = (gameData.currentPlayer === currentUser.uid) ? 'Your Turn' : 'Opponent\'s Turn';
             }
+
+            // New: Update player names display
+            playerNamesContainer.innerHTML = '';
+            gameData.players.forEach((playerId, index) => {
+                const playerName = (playerId === currentUser.uid) ? `You (Player ${index + 1})` : `Opponent (Player ${index + 1})`;
+                const div = document.createElement('div');
+                div.textContent = playerName;
+                playerNamesContainer.appendChild(div);
+            });
+
+            renderPlayerNames(players); // Call the new function here
         }
     });
 }
