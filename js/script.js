@@ -507,3 +507,13 @@ startGameButton.addEventListener('click', async () => {
         joinGame(gameId);
     }
 });
+
+function joinGame(gameId) {
+    // Show game container, hide lobby
+    gameLobbyContainer.style.display = 'none';
+    gameContainer.style.display = 'flex';
+    document.getElementById('current-game-id').textContent = gameId;
+
+    // TODO: Add your Firestore snapshot listener and game setup logic here
+    // For example, listen for board updates and render the board
+}
