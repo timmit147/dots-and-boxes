@@ -1,30 +1,105 @@
 <html>
+<head>
+    <title>Chain Reaction</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
 <body>
-  <div class="board">
-  </div>
+    <h1>Chain Reaction</h1>
+    <div id="auth-container">
+        <h2>Sign In / Sign Up</h2>
+        <input type="email" id="email" placeholder="Email">
+        <input type="password" id="password" placeholder="Password">
+        <button id="signup-button">Sign Up</button>
+        <button id="signin-button">Sign In</button>
+        <p id="auth-status"></p>
+    </div>
+    <div id="game-container" style="display:none;">
+        <div class="board"></div>
+        <button id="signout-button">Sign Out</button>
+    </div>
+    
+    <script src="js/script.js"></script>
+
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCQh3iNGIGDVaFTmiEGyZa6r5r7U0thX80",
+            authDomain: "box-chain.firebaseapp.com",
+            projectId: "box-chain",
+            storageBucket: "box-chain.firebasestorage.app",
+            messagingSenderId: "957225784449",
+            appId: "1:957225784449:web:a02f5e553128cd61e66980"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        // Get DOM elements
+        const authContainer = document.getElementById('auth-container');
+        const gameContainer = document.getElementById('game-container');
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        const signupButton = document.getElementById('signup-button');
+        const signinButton = document.getElementById('signin-button');
+        const signoutButton = document.getElementById('signout-button');
+        const authStatus = document.getElementById('auth-status');
+
+        // Handle sign up
+        signupButton.addEventListener('click', () => {
+            const email = emailInput.value;
+            const password = passwordInput.value;
+            createUserWithEmailAndPassword(auth, email, password)
+                .then((userCredential) => {
+                    const user = userCredential.user;
+                    authStatus.textContent = `User ${user.email} signed up successfully!`;
+                })
+                .catch((error) => {
+                    authStatus.textContent = `Sign Up Error: ${error.message}`;
+                });
+        });
+
+        // Handle sign in
+        signinButton.addEventListener('click', () => {
+            const email = emailInput.value;
+            const password = passwordInput.value;
+            signInWithEmailAndPassword(auth, email, password)
+                .then((userCredential) => {
+                    const user = userCredential.user;
+                    authStatus.textContent = `User ${user.email} signed in successfully!`;
+                })
+                .catch((error) => {
+                    authStatus.textContent = `Sign In Error: ${error.message}`;
+                });
+        });
+
+        // Handle sign out
+        signoutButton.addEventListener('click', () => {
+            signOut(auth).then(() => {
+                authStatus.textContent = 'User signed out.';
+            }).catch((error) => {
+                authStatus.textContent = `Sign Out Error: ${error.message}`;
+            });
+        });
+
+        // Listen for authentication state changes
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // User is signed in
+                authContainer.style.display = 'none';
+                gameContainer.style.display = 'block';
+                console.log('User signed in:', user.email);
+            } else {
+                // User is signed out
+                authContainer.style.display = 'block';
+                gameContainer.style.display = 'none';
+                console.log('User signed out');
+            }
+        });
+    </script>
 </body>
-<link rel="stylesheet" href="css/style.css">
-<script src="js/script.js"></script>
-
-<script type="module">
-  // Import the functions you need from the SDKs you need
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
-
-  // Your web app's Firebase configuration
-  const firebaseConfig = {
-    apiKey: "AIzaSyCQh3iNGIGDVaFTmiEGyZa6r5r7U0thX80",
-    authDomain: "box-chain.firebaseapp.com",
-    projectId: "box-chain",
-    storageBucket: "box-chain.firebasestorage.app",
-    messagingSenderId: "957225784449",
-    appId: "1:957225784449:web:a02f5e553128cd61e66980"
-  };
-
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-</script>
 </html>
-
-
