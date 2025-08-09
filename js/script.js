@@ -338,16 +338,17 @@ startGameButton.addEventListener('click', async () => {
 
     try {
         // Try to find an existing waiting player
-        const availableMatches = await getDocs(query(
+        const availableMatchesSnap = await getDocs(query(
             matchesRef,
-            where('status', '==', 'waiting'),
-            orderBy('timestamp', 'asc'),
-            limit(1)
+            where('status', '==', 'waiting')
         ));
-
-        if (!availableMatches.empty && availableMatches.docs[0].data().uid !== currentUser.uid) {
+        // Sort by timestamp in JS and pick the first not yourself
+        const availableMatches = availableMatchesSnap.docs
+            .filter(doc => doc.data().uid !== currentUser.uid)
+            .sort((a, b) => a.data().timestamp - b.data().timestamp);
+        if (availableMatches.length > 0) {
             // Found a waiting player - join their game
-            const waitingPlayer = availableMatches.docs[0];
+            const waitingPlayer = availableMatches[0];
             const waitingPlayerId = waitingPlayer.data().uid;
             
             try {
