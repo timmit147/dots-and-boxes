@@ -509,11 +509,39 @@ startGameButton.addEventListener('click', async () => {
 });
 
 function joinGame(gameId) {
-    // Show game container, hide lobby
     gameLobbyContainer.style.display = 'none';
     gameContainer.style.display = 'flex';
-    document.getElementById('current-game-id').textContent = gameId;
+    currentGameIdSpan.textContent = gameId;
+    setGridLayout();
 
-    // TODO: Add your Firestore snapshot listener and game setup logic here
-    // For example, listen for board updates and render the board
+    const gameRef = doc(db, 'games', gameId);
+    if (unsubscribeFromGame) unsubscribeFromGame();
+
+    unsubscribeFromGame = onSnapshot(gameRef, (docSnap) => {
+        if (docSnap.exists()) {
+            const gameData = docSnap.data();
+            boardState = gameData.boardState;
+            players = gameData.players;
+            currentPlayerId = gameData.currentPlayer;
+            const playerNames = gameData.playerNames || {};
+
+            renderBoard(boardState);
+            renderPlayerNames(players, playerNames);
+
+            // End game for both players when all boxes are filled
+            if (boardState.every(cell => cell !== null) && !gameEnded) {
+                endGame(boardState);
+                return;
+            }
+
+            // Show timer only if it's your turn and game not ended
+            if (!gameEnded && currentUser && currentUser.uid === currentPlayerId) {
+                startTurnTimer();
+            } else {
+                clearInterval(timerInterval);
+                timerActive = false;
+                updateTimerDisplay();
+            }
+        }
+    });
 }
