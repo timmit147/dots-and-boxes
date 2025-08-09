@@ -206,7 +206,7 @@ onAuthStateChanged(auth, (user) => {
     if (user) {
         currentUser = user;
         authContainer.style.display = 'none';
-        gameLobbyContainer.style.display = 'block';
+        gameLobbyContainer.style.display = 'flex';
         // Optional: Differentiate UI for guest users
         if (user.isAnonymous) {
             authStatus.textContent = "You are logged in as a guest. Your game progress will not be saved.";
@@ -215,7 +215,7 @@ onAuthStateChanged(auth, (user) => {
         }
     } else {
         currentUser = null;
-        authContainer.style.display = 'block';
+        authContainer.style.display = 'flex';
         gameLobbyContainer.style.display = 'none';
         gameContainer.style.display = 'none';
     }
@@ -270,7 +270,7 @@ joinGameButton.addEventListener('click', async () => {
 
 function joinGame(gameId) {
     gameLobbyContainer.style.display = 'none';
-    gameContainer.style.display = 'block';
+    gameContainer.style.display = 'flex';
     currentGameIdSpan.textContent = gameId;
     setGridLayout();
 
@@ -296,7 +296,7 @@ function joinGame(gameId) {
 leaveGameButton.addEventListener('click', () => {
     if (unsubscribeFromGame) unsubscribeFromGame();
     currentGameId = null;
-    gameLobbyContainer.style.display = 'block';
+    gameLobbyContainer.style.display = 'flex';
     gameContainer.style.display = 'none';
 });
 

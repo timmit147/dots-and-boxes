@@ -2,7 +2,18 @@ body{
     background-color:#9bd1f7;
     margin: 0;
     display: flex;
+        align-items: center;
   }
+
+  p{
+    margin: 0;
+  }
+
+  header {
+    padding: 20px;
+    width: 100%;
+        box-sizing: border-box;
+}
 
 .board {
     width: 90vw;
@@ -10,6 +21,13 @@ body{
     position: relative;
     justify-self: center;
     position-area: center;
+    display: grid;
+    grid-gap: 0;
+    flex-direction: column;
+        padding: 20px;
+    width: 100%;
+    box-sizing: border-box;
+    aspect-ratio: 1;
     display: grid;
     grid-gap: 0;
 }
