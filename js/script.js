@@ -156,11 +156,10 @@ function updateTimerDisplay() {
 }
 
 function showTimeoutWin() {
-    const timerContainer = document.getElementById('timer-container');
-    if (timerContainer) {
-        timerContainer.textContent = "Time's up! Opponent wins!";
-    }
-    // Optionally, you can add logic here to end the game or update Firestore
+    gameEnded = true;
+    clearInterval(timerInterval);
+    timerActive = false;
+    endGame(boardState, true); // Pass true for timeout
 }
 
 // --- Game Logic ---
@@ -493,7 +492,7 @@ board.addEventListener('click', (event) => {
     });
 });
 
-function endGame(finalBoardState) {
+function endGame(finalBoardState, isTimeout = false) {
     gameEnded = true;
     clearInterval(timerInterval);
     timerActive = false;
@@ -505,41 +504,45 @@ function endGame(finalBoardState) {
     // Get player names
     let winnerText = '';
     let playerNames = {};
-    if (players.length === 2 && window.currentGameId) {
-        // Try to get playerNames from Firestore
-        const gameRef = doc(db, 'games', window.currentGameId);
+    const timerContainer = document.getElementById('timer-container');
+
+    // Get names from Firestore
+    if (players.length === 2 && currentGameId) {
+        const gameRef = doc(db, 'games', currentGameId);
         getDoc(gameRef).then((docSnap) => {
             if (docSnap.exists()) {
                 playerNames = docSnap.data().playerNames || {};
                 let winnerName = '';
-                if (player1Score > player2Score) {
-                    winnerName = playerNames[players[0]] || 'Player 1';
-                } else if (player2Score > player1Score) {
-                    winnerName = playerNames[players[1]] || 'Player 2';
-                }
-                if (player1Score === player2Score) {
-                    winnerText = "It's a draw!";
+                if (isTimeout) {
+                    // On timeout, opponent wins
+                    const opponentIdx = players[0] === currentUser.uid ? 1 : 0;
+                    winnerName = playerNames[players[opponentIdx]] || `Player ${opponentIdx + 1}`;
+                    winnerText = `Time's up! ${winnerName} wins!`;
                 } else {
-                    winnerText = `${winnerName} wins!`;
+                    if (player1Score > player2Score) {
+                        winnerName = playerNames[players[0]] || 'Player 1';
+                        winnerText = `${winnerName} wins!`;
+                    } else if (player2Score > player1Score) {
+                        winnerName = playerNames[players[1]] || 'Player 2';
+                        winnerText = `${winnerName} wins!`;
+                    } else {
+                        winnerText = "It's a draw!";
+                    }
                 }
-                const timerContainer = document.getElementById('timer-container');
-                if (timerContainer) {
-                    timerContainer.textContent = winnerText;
-                }
+                if (timerContainer) timerContainer.textContent = winnerText;
             }
         });
     } else {
         // Fallback if playerNames not available
-        if (player1Score > player2Score) {
+        if (isTimeout) {
+            winnerText = "Time's up! Opponent wins!";
+        } else if (player1Score > player2Score) {
             winnerText = 'Player 1 wins!';
         } else if (player2Score > player1Score) {
             winnerText = 'Player 2 wins!';
         } else {
             winnerText = "It's a draw!";
         }
-        const timerContainer = document.getElementById('timer-container');
-        if (timerContainer) {
-            timerContainer.textContent = winnerText;
-        }
+        if (timerContainer) timerContainer.textContent = winnerText;
     }
 }
