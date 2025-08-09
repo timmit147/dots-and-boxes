@@ -359,3 +359,55 @@ startGameButton.addEventListener('click', async () => {
         }
     });
 });
+
+function joinGame(gameId) {
+    gameLobbyContainer.style.display = 'none';
+    gameContainer.style.display = 'flex';
+    currentGameIdSpan.textContent = gameId;
+    setGridLayout();
+
+    const gameRef = doc(db, 'games', gameId);
+    if (unsubscribeFromGame) unsubscribeFromGame();
+
+    unsubscribeFromGame = onSnapshot(gameRef, (docSnap) => {
+        if (docSnap.exists()) {
+            const gameData = docSnap.data();
+            boardState = gameData.boardState;
+            players = gameData.players;
+            currentPlayerId = gameData.currentPlayer;
+            const playerNames = gameData.playerNames || {};
+            timerSeconds = typeof gameData.timerSeconds === 'number' ? gameData.timerSeconds : 15;
+
+            renderBoard(boardState);
+            renderPlayerNames(players, playerNames);
+
+            // Show winner message if game is ended
+            const timerContainer = document.getElementById('timer-container');
+            if (gameData.status === 'ended') {
+                gameEnded = true;
+                clearInterval(timerInterval);
+                timerActive = false;
+
+                if (gameData.winner) {
+                    const winnerName = playerNames[gameData.winner] || 'Opponent';
+                    timerContainer.textContent = `${winnerName} wins!`;
+                } else {
+                    timerContainer.textContent = "It's a draw!";
+                }
+                return;
+            }
+
+            // Only start timer if both players are present and game is playing
+            if (players.length === 2 && gameData.status === 'playing') {
+                if (!gameEnded && currentUser && currentUser.uid === currentPlayerId && !timerActive) {
+                    startTurnTimer();
+                }
+                updateTimerDisplay();
+            } else {
+                clearInterval(timerInterval);
+                timerActive = false;
+                timerContainer.textContent = "Waiting for opponent...";
+            }
+        }
+    });
+}
