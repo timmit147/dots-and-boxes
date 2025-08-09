@@ -519,23 +519,39 @@ function joinGame(gameId) {
             players = gameData.players;
             currentPlayerId = gameData.currentPlayer;
             const playerNames = gameData.playerNames || {};
+            const winner = gameData.winner;
+            const status = gameData.status;
+            timerSeconds = typeof gameData.timerSeconds === 'number' ? gameData.timerSeconds : 15;
 
             renderBoard(boardState);
             renderPlayerNames(players, playerNames);
 
-            // End game for both players when all boxes are filled
-            if (boardState.every(cell => cell !== null) && !gameEnded) {
-                endGame(boardState);
+            const timerContainer = document.getElementById('timer-container');
+
+            // Show winner message if game is ended
+            if (status === 'ended') {
+                gameEnded = true;
+                clearInterval(timerInterval);
+                timerActive = false;
+
+                if (winner) {
+                    const winnerName = playerNames[winner] || 'Opponent';
+                    timerContainer.textContent = `${winnerName} wins!`;
+                } else {
+                    timerContainer.textContent = "It's a draw!";
+                }
                 return;
             }
 
-            // Show timer only if it's your turn and game not ended
-            if (!gameEnded && currentUser && currentUser.uid === currentPlayerId) {
+            // Show timer for everyone, always use Firestore value
+            updateTimerDisplay();
+
+            // Only start local timer if it's your turn and game not ended
+            if (!gameEnded && currentUser && currentUser.uid === currentPlayerId && !timerActive) {
                 startTurnTimer();
             } else {
                 clearInterval(timerInterval);
                 timerActive = false;
-                updateTimerDisplay();
             }
         }
     });
