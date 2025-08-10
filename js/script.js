@@ -33,6 +33,7 @@ const leaveGameButton = document.getElementById('leave-game-button');
 const startGameButton = document.getElementById('start-game-button'); // New element for start game
 const timerDisplay = document.getElementById('timer-container');
 const playerNamesContainer = document.getElementById('player-names-container');
+const openLoginBtn = document.getElementById('open-login-btn');
 
 // Game state variables
 const rows = 10;
@@ -444,6 +445,21 @@ function joinGame(gameId) {
                 if (board) board.classList.add('disabled');
                 timerContainer.textContent = "Waiting for opponent...";
             }
+        }
+    });
+}
+
+if (openLoginBtn) {
+    openLoginBtn.addEventListener('click', () => {
+        // Show login UI and hide game UI
+        if (authContainer) authContainer.style.display = 'flex';
+        if (gameLobbyContainer) gameLobbyContainer.style.display = 'none';
+        if (gameContainer) gameContainer.style.display = 'none';
+
+        // Optional: stop any active game snapshot listener
+        if (typeof unsubscribeFromGame === 'function') {
+            unsubscribeFromGame();
+            unsubscribeFromGame = null;
         }
     });
 }
