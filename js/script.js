@@ -449,17 +449,58 @@ function joinGame(gameId) {
     });
 }
 
-if (openLoginBtn) {
-    openLoginBtn.addEventListener('click', () => {
-        // Show login UI and hide game UI
-        if (authContainer) authContainer.style.display = 'flex';
-        if (gameLobbyContainer) gameLobbyContainer.style.display = 'none';
-        if (gameContainer) gameContainer.style.display = 'none';
+// Top-right icon (must exist in your HTML as #open-login-btn)
+const openLoginBtn = document.getElementById('open-login-btn');
 
-        // Optional: stop any active game snapshot listener
-        if (typeof unsubscribeFromGame === 'function') {
-            unsubscribeFromGame();
-            unsubscribeFromGame = null;
-        }
-    });
+// Create fullscreen auth menu once, appended to body
+function ensureFullscreenMenu() {
+    if (document.getElementById('fullscreen-menu')) return;
+
+    const overlay = document.createElement('div');
+    overlay.id = 'fullscreen-menu';
+    overlay.setAttribute('aria-hidden', 'true');
+    overlay.innerHTML = `
+        <div class="fs-backdrop"></div>
+        <div class="fs-card" role="dialog" aria-modal="true" aria-labelledby="fs-title">
+            <button class="fs-close" aria-label="Close">✕</button>
+            <nav class="fs-links" aria-label="Authentication links">
+                <a id="fs-login-link" href="login.html">Login</a>
+                <a id="fs-signup-link" href="signup.html">Create account</a>
+            </nav>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+
+    const closeBtn = overlay.querySelector('.fs-close');
+    const backdrop = overlay.querySelector('.fs-backdrop');
+
+    function openMenu() {
+        overlay.classList.add('open');
+        overlay.setAttribute('aria-hidden', 'false');
+        document.addEventListener('keydown', onEsc);
+    }
+    function closeMenu() {
+        overlay.classList.remove('open');
+        overlay.setAttribute('aria-hidden', 'true');
+        document.removeEventListener('keydown', onEsc);
+    }
+    function onEsc(e) {
+        if (e.key === 'Escape') closeMenu();
+    }
+
+    // Wire open/close
+    if (openLoginBtn) openLoginBtn.addEventListener('click', openMenu);
+    closeBtn.addEventListener('click', closeMenu);
+    backdrop.addEventListener('click', closeMenu);
+
+    // Expose for reuse if needed
+    window.__fsMenuOpen = openMenu;
+    window.__fsMenuClose = closeMenu;
+}
+
+// Ensure menu exists after DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', ensureFullscreenMenu);
+} else {
+    ensureFullscreenMenu();
 }
