@@ -1,48 +1,47 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chain</title>
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="icon" href="data:,">
+  <meta charset="utf-8" />
+  <title>Dots & Boxes</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
-    <!-- Login shortcut icon -->
-    <div id="login-shortcut">
-        <button id="open-login-btn" title="Login" aria-label="Open login">
-            <!-- Simple user icon -->
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-4.418 0-8 2.239-8 5v1h16v-1c0-2.761-3.582-5-8-5Z"/>
-            </svg>
-        </button>
+  <!-- Top-right icon -->
+  <div id="login-shortcut">
+    <button id="open-login-btn" title="Account" aria-label="Open account">☰</button>
+  </div>
+
+  <!-- Auth/login container (unchanged IDs) -->
+  <div id="auth-container">
+    <h2>Sign in</h2>
+    <input id="email" type="email" placeholder="Email" />
+    <input id="password" type="password" placeholder="Password" />
+    <div>
+      <button id="signin-button">Sign in</button>
+      <button id="signup-button">Create account</button>
+      <button id="guest-login-button">Continue as guest</button>
+      <button id="signout-button">Sign out</button>
     </div>
+    <p id="auth-status"></p>
+  </div>
 
-        <div id="auth-container">
-            <h2>Sign In / Sign Up</h2>
-            <input type="email" id="email" placeholder="Email">
-            <input type="password" id="password" placeholder="Password">
-            <button id="signup-button">Sign Up</button>
-            <button id="signin-button">Sign In</button>
-            <button id="guest-login-button">Login as Guest</button>
-            <p id="auth-status"></p>
-        </div>
-        
-        <div id="game-lobby-container" style="display:none;">
-            <h2>Game Lobby</h2>
-            <button id="start-game-button">Start Game</button>
-            <button id="signout-button">Sign Out</button>
-            <p id="lobby-status"></p>
-        </div>
-        
-        <div id="game-container" style="display:none;">
-            <div class="game-layout">
-                <button id="leave-game-button"></button>
-            </div>
-            <div class="board"></div>
-            <p id="timer-container"></p>
-            <div id="player-names-container"></div>
-        </div>
+  <!-- Lobby -->
+  <div id="game-lobby-container" style="display:none;">
+    <h2>Dots & Boxes</h2>
+    <button id="start-game-button">Start Game</button>
+    <p id="lobby-status"></p>
+  </div>
 
-    <script type="module" src="js/script.js"></script>
+  <!-- Game -->
+  <div id="game-container" style="display:none;">
+    <button id="leave-game-button" title="Leave game"></button>
+    <div id="player-names-container"></div>
+    <div id="timer-container"></div>
+    <div class="board"></div>
+  </div>
+
+  <!-- Keep this -->
+  <script type="module" src="js/main.js"></script>
 </body>
 </html>
