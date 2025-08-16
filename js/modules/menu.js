@@ -1,16 +1,5 @@
 // Fullscreen menu opened by top-right icon. SPA: show auth container instead of navigating.
 export function initMenu() {
-  const openLoginBtn = document.getElementById('open-login-btn');
-
-  function showAuth() {
-    const authContainer = document.getElementById('auth-container');
-    const lobby = document.getElementById('game-lobby-container');
-    const game = document.getElementById('game-container');
-    if (authContainer) authContainer.style.display = 'flex';
-    if (lobby) lobby.style.display = 'none';
-    if (game) game.style.display = 'none';
-  }
-
   function ensureFullscreenMenu() {
     if (document.getElementById('fullscreen-menu')) return;
 
@@ -46,13 +35,42 @@ export function initMenu() {
     };
     const onEsc = (e) => { if (e.key === 'Escape') closeMenu(); };
 
-    openLoginBtn?.addEventListener('click', openMenu);
+    // Bind to the ONE icon (it’s the same node, moved between body/header)
+    const bind = () => {
+      const btn = document.getElementById('open-login-btn');
+      btn?.addEventListener('click', openMenu);
+    };
+    bind();
+
+    // In case DOM is re-rendered, re-bind on focus
+    document.addEventListener('focusin', () => {
+      // ensure it's still bound
+      const btn = document.getElementById('open-login-btn');
+      if (btn && !btn.__fsBound) {
+        btn.addEventListener('click', openMenu);
+        btn.__fsBound = true;
+      }
+    });
+
     closeBtn?.addEventListener('click', closeMenu);
     backdrop?.addEventListener('click', closeMenu);
+
+    const showAuth = () => {
+      const authContainer = document.getElementById('auth-container');
+      const lobby = document.getElementById('game-lobby-container');
+      const game = document.getElementById('game-container');
+      if (authContainer) authContainer.style.display = 'flex';
+      if (lobby) lobby.style.display = 'none';
+      if (game) game.style.display = 'none';
+    };
 
     loginLink?.addEventListener('click', (e) => { e.preventDefault(); showAuth(); closeMenu(); });
     signupLink?.addEventListener('click', (e) => { e.preventDefault(); showAuth(); closeMenu(); });
   }
 
-  ensureFullscreenMenu();
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', ensureFullscreenMenu);
+  } else {
+    ensureFullscreenMenu();
+  }
 }
