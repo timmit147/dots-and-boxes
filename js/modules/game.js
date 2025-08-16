@@ -1,4 +1,5 @@
 import { auth, db, doc, setDoc, getDoc, updateDoc, onSnapshot, collection, deleteDoc, signInAnonymously } from '../firebase.js';
+import { setGridLayout, getBoxIndex, getNeighbors, renderBoard, countUnclickedNeighbors, findAndFillChain } from './board.js';
 
 // helper: auto guest if not logged in
 async function ensureUserSignedIn() {
@@ -16,7 +17,7 @@ export function initGame() {
   const lobbyStatus = document.getElementById('lobby-status');
   const board = document.querySelector('.board');
   const playerNamesContainer = document.getElementById('player-names-container');
-  const timerDisplay = document.getElementById('timer-display');
+  const timerDisplay = document.getElementById('timer-container');
 
   let clickedBoxes = new Set();
   let players = [];
@@ -109,15 +110,6 @@ export function initGame() {
     }
   });
 
-  function joinGame(gameId) {
-    if (authContainer) authContainer.style.display = 'none';
-    if (gameLobbyContainer) gameLobbyContainer.style.display = 'none';
-    if (gameContainer) gameContainer.style.display = 'flex';
-    showBack(true);
-
-    // ...existing onSnapshot, board setup, timers...
-  }
-
   function updateTimerDisplay() {
     const minutes = Math.floor(timerSeconds / 60);
     const seconds = timerSeconds % 60;
@@ -183,18 +175,20 @@ export function initGame() {
       renderBoard(boardState, clickedBoxes);
       renderPlayerNames(players, playerNames);
 
-      const timerContainer = document.getElementById('timer-container');
+      // Use the same timer element everywhere
       if (gameData.status === 'ended') {
         gameEnded = true;
         clearInterval(timerInterval);
         timerActive = false;
         board?.classList.add('disabled');
 
-        if (gameData.winner) {
-          const winnerName = playerNames[gameData.winner] || 'Opponent';
-          timerContainer.textContent = `${winnerName} wins!`;
-        } else {
-          timerContainer.textContent = "It's a draw!";
+        if (timerDisplay) {
+          if (gameData.winner) {
+            const winnerName = playerNames[gameData.winner] || 'Opponent';
+            timerDisplay.textContent = `${winnerName} wins!`;
+          } else {
+            timerDisplay.textContent = "It's a draw!";
+          }
         }
         return;
       }
@@ -209,7 +203,7 @@ export function initGame() {
         clearInterval(timerInterval);
         timerActive = false;
         board?.classList.add('disabled');
-        timerContainer.textContent = "Waiting for opponent...";
+        if (timerDisplay) timerDisplay.textContent = "Waiting for opponent...";
       }
     });
   }
