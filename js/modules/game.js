@@ -1,26 +1,36 @@
 import { auth, db, doc, setDoc, getDoc, updateDoc, onSnapshot, collection, deleteDoc, signInAnonymously } from '../firebase.js';
-import { setGridLayout, getBoxIndex, getNeighbors, renderBoard, countUnclickedNeighbors, findAndFillChain } from './board.js';
 
-let clickedBoxes = new Set();
-let players = [];
-let currentPlayerId = null;
-let currentGameId = null;
-let unsubscribeFromGame = null;
-let boardState = Array(100).fill(null);
-let timerInterval = null;
-let timerActive = false;
-let gameEnded = false;
-let timerSeconds = 15;
+// helper: auto guest if not logged in
+async function ensureUserSignedIn() {
+  if (auth.currentUser) return auth.currentUser;
+  const cred = await signInAnonymously(auth);
+  return cred.user;
+}
 
 export function initGame() {
-  const board = document.querySelector('.board');
   const authContainer = document.getElementById('auth-container');
   const gameLobbyContainer = document.getElementById('game-lobby-container');
   const gameContainer = document.getElementById('game-container');
   const backButton = document.getElementById('back-button');
+  const startGameButton = document.getElementById('start-game-button');
+  const lobbyStatus = document.getElementById('lobby-status');
+  const board = document.querySelector('.board');
+  const playerNamesContainer = document.getElementById('player-names-container');
+  const timerDisplay = document.getElementById('timer-display');
+
+  let clickedBoxes = new Set();
+  let players = [];
+  let currentPlayerId = null;
+  let currentGameId = null;
+  let unsubscribeFromGame = null;
+  let boardState = Array(100).fill(null);
+  let timerInterval = null;
+  let timerActive = false;
+  let gameEnded = false;
+  let timerSeconds = 15;
 
   function showBack(show) {
-    if (backButton) backButton.style.display = show ? 'inline-flex' : 'none';
+    if (backButton) backButton.style.visibility = show ? 'visible' : 'hidden';
   }
 
   async function stopGameAndGoToLogin() {
@@ -33,18 +43,75 @@ export function initGame() {
       currentGameId = null;
       if (gameContainer) gameContainer.style.display = 'none';
       if (gameLobbyContainer) gameLobbyContainer.style.display = 'none';
-      if (authContainer) authContainer.style.display = 'flex';
+      if (authContainer) authContainer.style.display = 'flex'; // go to login
       showBack(false);
     }
   }
 
   backButton?.addEventListener('click', stopGameAndGoToLogin);
 
-  // Call this from your matchmaking when a game starts
+  // Ensure Start Game always works (auto-guest if needed)
+  startGameButton?.addEventListener('click', async () => {
+    try {
+      startGameButton.disabled = true;
+      await ensureUserSignedIn(); // guest if needed
+      lobbyStatus.textContent = 'Waiting for opponent...';
+
+      const matchesRef = collection(db, 'matches');
+      const myMatchRef = doc(matchesRef, auth.currentUser.uid);
+      await setDoc(myMatchRef, { uid: auth.currentUser.uid, timestamp: Date.now() });
+
+      const unsubscribe = onSnapshot(matchesRef, async (snapshot) => {
+        const waiting = [];
+        snapshot.forEach(d => waiting.push(d.id));
+        if (waiting.length < 2) return;
+
+        const pair = waiting.slice(0, 2).sort();
+        const opponentUid = pair.find(id => id !== auth.currentUser.uid);
+        const gameId = pair.join('-');
+
+        if (auth.currentUser.uid === pair[0]) {
+          const gameRef = doc(db, 'games', gameId);
+
+          const myName = auth.currentUser.isAnonymous
+            ? 'Guest' + Math.floor(1000 + Math.random() * 9000)
+            : (auth.currentUser.email?.split('@')[0] || 'Player');
+
+          let oppName = 'Guest' + Math.floor(1000 + Math.random() * 9000);
+          try {
+            const oppDoc = await getDoc(doc(db, 'users', opponentUid));
+            if (oppDoc.exists() && oppDoc.data()?.name) oppName = oppDoc.data().name;
+          } catch {}
+
+          await setDoc(gameRef, {
+            players: pair,
+            playerNames: { [auth.currentUser.uid]: myName, [opponentUid]: oppName },
+            status: 'playing',
+            boardState: Array(100).fill(null),
+            currentPlayer: pair[0],
+            timerSeconds: 15
+          });
+        }
+
+        await Promise.all([
+          deleteDoc(doc(matchesRef, pair[0])),
+          deleteDoc(doc(matchesRef, pair[1]))
+        ]);
+
+        currentGameId = gameId;
+        joinGame(gameId);
+        unsubscribe();
+        startGameButton.disabled = false;
+      });
+    } catch (e) {
+      lobbyStatus.textContent = 'Could not start game. Try again.';
+      startGameButton.disabled = false;
+    }
+  });
+
   function joinGame(gameId) {
-    currentGameId = gameId;
-    if (gameLobbyContainer) gameLobbyContainer.style.display = 'none';
     if (authContainer) authContainer.style.display = 'none';
+    if (gameLobbyContainer) gameLobbyContainer.style.display = 'none';
     if (gameContainer) gameContainer.style.display = 'flex';
     showBack(true);
 
@@ -188,75 +255,5 @@ export function initGame() {
       currentPlayer: nextPlayerId,
       timerSeconds: 15
     }).catch(() => {});
-  });
-
-  // Helper: ensure a user exists (auto sign-in as Guest if needed)
-  async function ensureUserSignedIn() {
-    if (auth.currentUser) return auth.currentUser;
-    const cred = await signInAnonymously(auth);
-    return cred.user;
-  }
-
-  startGameButton?.addEventListener('click', async () => {
-    try {
-      startGameButton.disabled = true;
-      // Auto-guest if not logged in; keep user if logged in
-      await ensureUserSignedIn();
-
-      lobbyStatus.textContent = "Waiting for opponent...";
-
-      const matchesRef = collection(db, 'matches');
-      const myMatchRef = doc(matchesRef, auth.currentUser.uid);
-
-      await setDoc(myMatchRef, { uid: auth.currentUser.uid, timestamp: Date.now() });
-
-      const unsubscribe = onSnapshot(matchesRef, async (snapshot) => {
-        const waitingPlayers = [];
-        snapshot.forEach(s => waitingPlayers.push(s.data().uid));
-        if (waitingPlayers.length < 2) return;
-
-        const bothUids = waitingPlayers.slice(0, 2).sort();
-        const opponentUid = bothUids.find(uid => uid !== auth.currentUser.uid);
-        const gameId = bothUids.join('-');
-
-        if (auth.currentUser.uid === bothUids[0]) {
-          const gameRef = doc(db, 'games', gameId);
-
-          const myName = auth.currentUser.isAnonymous
-            ? "Guest" + Math.floor(1000 + Math.random() * 9000)
-            : auth.currentUser.email.split('@')[0];
-
-          let opponentName = "Guest" + Math.floor(1000 + Math.random() * 9000);
-          try {
-            const opponentDoc = await getDoc(doc(db, 'users', opponentUid));
-            if (opponentDoc.exists() && opponentDoc.data()?.name) {
-              opponentName = opponentDoc.data().name;
-            }
-          } catch {}
-
-          await setDoc(gameRef, {
-            players: bothUids,
-            playerNames: { [auth.currentUser.uid]: myName, [opponentUid]: opponentName },
-            status: 'playing',
-            boardState: Array(100).fill(null),
-            currentPlayer: auth.currentUser.uid,
-            timerSeconds: 15
-          });
-        }
-
-        await deleteDoc(doc(matchesRef, bothUids[0]));
-        await deleteDoc(doc(matchesRef, bothUids[1]));
-
-        currentGameId = gameId;
-        joinGame(gameId);
-
-        unsubscribe();
-        startGameButton.disabled = false;
-      });
-    } catch (e) {
-      console.error(e);
-      lobbyStatus.textContent = "Could not start game. Try again.";
-      startGameButton.disabled = false;
-    }
   });
 }

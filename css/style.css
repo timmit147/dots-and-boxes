@@ -79,16 +79,23 @@ input{
 /* Top menu: relative (scrolls with page) */
 #top-menu {
   position: relative;
-  height: 56px;
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 1fr auto; /* left spacer, middle, right icon */
   align-items: center;
-  justify-content: space-between;
   padding: 8px 12px;
 }
 
 /* Back icon hidden by default; JS shows it only in-game */
-#back-button { display: none; }
+#back-button {
+  visibility: hidden; /* use visibility instead of display so right icon stays at the right */
+}
 
+/* Make sure lobby is fully interactive */
+#game-lobby-container {
+  pointer-events: auto;
+}
+
+/* Optional: ensure buttons look/behave the same */
 .icon-btn {
   width: 40px;
   height: 40px;
