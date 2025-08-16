@@ -73,10 +73,18 @@ input{
     background: #f4f4f4;
 }
 
-/* Keep auth hidden by default to avoid flash */
-#auth-container {
-    display: none;
-}
+/* Avoid login flash; SPA shows it only when needed */
+#auth-container { display: none; }
+
+/* Fullscreen auth menu */
+#fullscreen-menu { position: fixed; inset: 0; display: none; z-index: 3000; }
+#fullscreen-menu.open { display: flex; }
+#fullscreen-menu .fs-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.6); }
+#fullscreen-menu .fs-card { position: relative; margin: auto; display: flex; flex-direction: column; align-items: center; gap: 16px; background: transparent; padding: 16px; }
+#fullscreen-menu .fs-close { position: absolute; top: -8px; right: -8px; width: 36px; height: 36px; border-radius: 9999px; border: 0; background: #fff; color: #252525; font-weight: 700; cursor: pointer; }
+#fullscreen-menu .fs-links { display: flex; flex-direction: column; gap: 12px; }
+#fullscreen-menu .fs-links a { text-decoration: none; padding: 10px 16px; background: #fff; border: 0; font-weight: 700; color: #252525; border-radius: 8px; text-align: center; }
+#fullscreen-menu .fs-links a:hover { background: #f4f4f4; }
 
 .game-layout {
     width: 100%;
@@ -159,63 +167,4 @@ input{
         color: white;
     font-weight: 700;
     padding: 10px;
-}
-
-/* Fullscreen auth menu */
-#fullscreen-menu {
-    position: fixed;
-    inset: 0;
-    display: none;            /* toggled by .open */
-    z-index: 3000;
-}
-#fullscreen-menu.open {
-    display: flex;
-}
-#fullscreen-menu .fs-backdrop {
-    position: absolute;
-    inset: 0;
-    background: rgba(0,0,0,0.6);
-}
-#fullscreen-menu .fs-card {
-    position: relative;
-    margin: auto;             /* centers horizontally and vertically */
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 16px;
-    background: transparent;  /* keep your site look; links are styled below */
-    padding: 16px;
-}
-#fullscreen-menu .fs-close {
-    position: absolute;
-    top: -8px;
-    right: -8px;
-    width: 36px;
-    height: 36px;
-    border-radius: 9999px;
-    border: 0;
-    background: #fff;
-    color: #252525;
-    font-weight: 700;
-    cursor: pointer;
-}
-#fullscreen-menu .fs-links {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-#fullscreen-menu .fs-links a {
-    display: inline-block;
-    text-decoration: none;
-    padding: 10px 16px;
-    background: white;        /* match your button style */
-    border: 0;
-    font-weight: 700;
-    color: #252525;
-    border-radius: 8px;
-    text-align: center;
-}
-#fullscreen-menu .fs-links a:hover {
-    cursor: pointer;
-    background: #f4f4f4;
 }
