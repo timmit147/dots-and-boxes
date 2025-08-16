@@ -7,13 +7,14 @@
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
-  <!-- Top-right icon -->
+  <!-- Add this login icon -->
   <div id="login-shortcut">
-    <button id="open-login-btn" title="Account" aria-label="Open account">☰</button>
+    <button id="open-login-btn" title="Login" aria-label="Open login">👤</button>
   </div>
 
+  <!-- Make sure the lobby is visible on load; others hidden -->
   <!-- Auth/login container (unchanged IDs) -->
-  <div id="auth-container">
+  <div id="auth-container" style="display: none;">
     <h2>Sign in</h2>
     <input id="email" type="email" placeholder="Email" />
     <input id="password" type="password" placeholder="Password" />
@@ -27,14 +28,14 @@
   </div>
 
   <!-- Lobby -->
-  <div id="game-lobby-container" style="display:none;">
+  <div id="game-lobby-container" style="display: flex;">
     <h2>Dots & Boxes</h2>
     <button id="start-game-button">Start Game</button>
     <p id="lobby-status"></p>
   </div>
 
   <!-- Game -->
-  <div id="game-container" style="display:none;">
+  <div id="game-container" style="display: none;">
     <button id="leave-game-button" title="Leave game"></button>
     <div id="player-names-container"></div>
     <div id="timer-container"></div>
