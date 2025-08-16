@@ -1,222 +1,137 @@
-body{
-    background-color:#252525;
-    margin: 0;
-    display: flex;
-    align-items: center;
-    flex-direction: column;
-    font-family: sans-serif;
-    justify-content: space-between;
-    height: 100vh;
-  }
-
-  p{
-    margin: 0;
-  }
-
-  h2{
-    margin: 0;
-  }
-
-  /* Full-page centered lobby */
-#game-lobby-container {
-    min-height: 100vh;           /* full page */
-    display: flex;               /* centered layout */
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    gap: 12px;
-    /* keeps your existing color/background intact */
+/* --- Reset and general styles --- */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: Arial, sans-serif;
 }
 
-  button{
-    padding: 10px;
-    background-color: white;
-    border: 0;
-    font-weight: 700;
-    color: #252525;
+body {
+  background-color: #f9f9f9;
+  color: #333;
 }
 
-button:hover{
-    cursor: pointer;
-}
-
-input{
-    padding: 10px;
-    background-color: white;
-    border: 0;
-    font-weight: 700;
-    color: #252525;
-    text-align-last: center;
-}
-
-#home-button {
-  visibility: hidden; /* hidden by default, shown only in-game */
-}
-
-
-/* Top-right login icon */
-#login-shortcut {
-    position: fixed;
-    top: 12px;
-    right: 12px;
-    z-index: 2000;
-}
-#open-login-btn {
-    width: 40px;
-    height: 40px;
-    border-radius: 9999px;
-    border: 1px solid rgba(0,0,0,0.1);
-    background: #fff;
-    color: #252525;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-}
-#open-login-btn:hover {
-    cursor: pointer;
-    background: #f4f4f4;
-}
-
-/* Avoid login flash; SPA shows it only when needed */
-#auth-container { display: none; }
-
-/* Top menu: relative (scrolls with page) */
+/* --- Top menu layout --- */
 #top-menu {
-  position: relative;
-  display: grid;
-  grid-template-columns: auto 1fr auto; /* left spacer, middle, right icon */
+  display: flex;
+  justify-content: space-between;
   align-items: center;
-  padding: 8px 12px;
+  padding: 10px 20px;
+  background-color: #ffffff;
+  border-bottom: 1px solid #ddd;
 }
 
-/* Back icon hidden by default; JS shows it only in-game */
-#back-button {
-  visibility: hidden; /* use visibility instead of display so right icon stays at the right */
+.top-menu-left {
+  display: flex;
+  justify-content: flex-start;
 }
 
-/* Make sure lobby is fully interactive */
-#game-lobby-container {
-  pointer-events: auto;
+.top-menu-right {
+  display: flex;
+  justify-content: flex-end;
 }
 
-/* Optional: ensure buttons look/behave the same */
 .icon-btn {
-  width: 40px;
-  height: 40px;
-  border-radius: 9999px;
-  border: 1px solid rgba(0,0,0,0.1);
-  background: #fff;
-  color: #252525;
-  display: inline-flex;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  font-size: 18px;
+}
+
+/* --- Lobby screen --- */
+#game-lobby-container {
+  display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  margin-top: 50px;
+  gap: 10px;
 }
-.icon-btn:hover { cursor: pointer; background: #f4f4f4; }
 
-/* Fullscreen auth menu (opened by JS) */
-#fullscreen-menu { position: fixed; inset: 0; display: none; z-index: 3000; }
-#fullscreen-menu.open { display: flex; }
-#fullscreen-menu .fs-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.6); }
-#fullscreen-menu .fs-card {
-  position: relative; margin: auto; display: flex; flex-direction: column;
-  align-items: center; gap: 16px; background: transparent; padding: 16px;
+#game-lobby-container button {
+  padding: 12px 24px;
+  font-size: 16px;
+  cursor: pointer;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  background-color: #e0e0e0;
 }
-#fullscreen-menu .fs-close {
-  position: absolute; top: -8px; right: -8px; width: 36px; height: 36px;
-  border-radius: 9999px; border: 0; background: #fff; color: #252525; font-weight: 700; cursor: pointer;
-}
-#fullscreen-menu .fs-links { display: flex; flex-direction: column; gap: 12px; }
-#fullscreen-menu .fs-links a {
-  text-decoration: none; padding: 10px 16px; background: #fff; border: 0;
-  font-weight: 700; color: #252525; border-radius: 8px; text-align: center;
-}
-#fullscreen-menu .fs-links a:hover { background: #f4f4f4; }
 
-/* Hide legacy floating login icon if it exists */
-#login-shortcut { display: none; }
+#game-lobby-container button:hover {
+  background-color: #d5d5d5;
+}
 
+/* --- Game container --- */
 #game-container {
-    flex-direction: column;
-    width: 100%;
-    height: 100%;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  margin-top: 20px;
 }
 
 .board {
-    padding: 20px;
-    width: 100%;
-    box-sizing: border-box;
-    aspect-ratio: 1;
-    display: grid;
-    grid-gap: 0;
-    margin: auto;
-    max-width: 550px;
+  display: grid;
+  grid-template-columns: repeat(10, 40px);
+  grid-template-rows: repeat(10, 40px);
+  gap: 2px;
 }
 
-/* Disable clicks when game ended */
-.board.disabled {
-    pointer-events: none;
-    opacity: 0.6;
+.board div {
+  width: 40px;
+  height: 40px;
+  background-color: #f2f2f2;
+  border: 1px solid #ccc;
+  cursor: pointer;
 }
 
-#timer-container{
-    padding: 20px;
-    padding-bottom: 0;
-    color: white;
+.board div.player_1 {
+  background-color: #4caf50;
 }
 
-#leave-game-button {
-    background-image: url("../assets/angle.svg");
-    background-repeat: no-repeat;
-    background-position: center;
-    background-size: contain; /* Fit the whole SVG inside */
-    height: 20px;
-    aspect-ratio: 1;
-    background-color: transparent;
-    border: none;
-    padding: 0;
+.board div.player_2 {
+  background-color: #f44336;
 }
 
+/* --- Player names --- */
 #player-names-container {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    padding: 20px;
-}
-
-.box{
-    background-color:#7C7C7C;
-}
-
-.even{
-    background-color:#252525;
-}
-
-.player_1{
-    background-color:#EF2828;
-        color: white;
-    font-weight: 700;
-    padding: 10px;
-}
-
-.player_2{
-    background-color:#126EBE;
-        color: white;
-    font-weight: 700;
-    padding: 10px;
-}
-
-/* Header inside game view */
-.game-header {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 8px 12px;
-  width: 100%;
-  box-sizing: border-box;
-  margin-bottom: 8px;
+  gap: 20px;
+  font-weight: bold;
 }
 
-/* Hide legacy floating login icon if it exists */
-#login-shortcut { display: none; }
+.player {
+  padding: 5px 10px;
+  border-radius: 6px;
+  background: #eee;
+}
+
+.player_1 {
+  background: #c8e6c9;
+}
+
+.player_2 {
+  background: #ffcdd2;
+}
+
+/* --- Timer --- */
+#timer-container {
+  font-size: 18px;
+  font-weight: bold;
+  margin-top: 10px;
+}
+
+/* --- Auth container --- */
+#auth-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 50px;
+  gap: 10px;
+}
+
+/* --- Buttons hover effect --- */
+button:hover {
+  opacity: 0.9;
+}
