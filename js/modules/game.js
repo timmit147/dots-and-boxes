@@ -14,17 +14,42 @@ let timerSeconds = 15;
 
 export function initGame() {
   const board = document.querySelector('.board');
+  const authContainer = document.getElementById('auth-container');
   const gameLobbyContainer = document.getElementById('game-lobby-container');
   const gameContainer = document.getElementById('game-container');
-  const authContainer = document.getElementById('auth-container');
-  const lobbyStatus = document.getElementById('lobby-status');
-  const startGameButton = document.getElementById('start-game-button');
-  const timerDisplay = document.getElementById('timer-container');
-  const playerNamesContainer = document.getElementById('player-names-container');
   const backButton = document.getElementById('back-button');
 
-  // Grid setup
-  setGridLayout();
+  function showBack(show) {
+    if (backButton) backButton.style.display = show ? 'inline-flex' : 'none';
+  }
+
+  async function stopGameAndGoToLogin() {
+    try {
+      if (unsubscribeFromGame) unsubscribeFromGame();
+      if (currentGameId) {
+        try { await updateDoc(doc(db, 'games', currentGameId), { status: 'ended' }); } catch {}
+      }
+    } finally {
+      currentGameId = null;
+      if (gameContainer) gameContainer.style.display = 'none';
+      if (gameLobbyContainer) gameLobbyContainer.style.display = 'none';
+      if (authContainer) authContainer.style.display = 'flex';
+      showBack(false);
+    }
+  }
+
+  backButton?.addEventListener('click', stopGameAndGoToLogin);
+
+  // Call this from your matchmaking when a game starts
+  function joinGame(gameId) {
+    currentGameId = gameId;
+    if (gameLobbyContainer) gameLobbyContainer.style.display = 'none';
+    if (authContainer) authContainer.style.display = 'none';
+    if (gameContainer) gameContainer.style.display = 'flex';
+    showBack(true);
+
+    // ...existing onSnapshot, board setup, timers...
+  }
 
   function updateTimerDisplay() {
     const minutes = Math.floor(timerSeconds / 60);
@@ -120,17 +145,6 @@ export function initGame() {
         timerContainer.textContent = "Waiting for opponent...";
       }
     });
-  }
-
-  backButton?.addEventListener('click', leaveToLobby);
-
-  function leaveToLobby() {
-    if (unsubscribeFromGame) unsubscribeFromGame();
-    currentGameId = null;
-    const gameLobbyContainer = document.getElementById('game-lobby-container');
-    const gameContainer = document.getElementById('game-container');
-    if (gameLobbyContainer) gameLobbyContainer.style.display = 'flex';
-    if (gameContainer) gameContainer.style.display = 'none';
   }
 
   // Remove any old leave button handlers if you had them

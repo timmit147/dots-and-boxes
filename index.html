@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
-  <!-- Fixed top menu -->
+  <!-- Top menu (relative) -->
   <div id="top-menu">
     <div class="top-menu-left">
       <button id="back-button" class="icon-btn" title="Back" aria-label="Back">
@@ -25,7 +25,7 @@
     </div>
   </div>
 
-  <!-- Remove old floating shortcut to avoid duplicates -->
+  <!-- Remove any old floating shortcut to avoid duplicates -->
   <!-- <div id="login-shortcut">...</div> -->
 
   <!-- Make sure the lobby is visible on load; others hidden -->
@@ -62,19 +62,6 @@
     <div class="board"></div>
   </div>
 
-  <div id="auth-container" style="display:none;">
-    <h2>Sign in</h2>
-    <input id="email" type="email" placeholder="Email" />
-    <input id="password" type="password" placeholder="Password" />
-    <div>
-      <button id="signin-button">Sign in</button>
-      <button id="signup-button">Create account</button>
-      <button id="guest-login-button">Continue as guest</button>
-      <button id="signout-button">Sign out</button>
-    </div>
-    <p id="auth-status"></p>
-  </div>
-  <!-- Keep this -->
   <script type="module" src="js/main.js"></script>
 </body>
 </html>

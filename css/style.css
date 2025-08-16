@@ -76,28 +76,53 @@ input{
 /* Avoid login flash; SPA shows it only when needed */
 #auth-container { display: none; }
 
-/* Fullscreen auth menu */
+/* Top menu: relative (scrolls with page) */
+#top-menu {
+  position: relative;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+}
+
+/* Back icon hidden by default; JS shows it only in-game */
+#back-button { display: none; }
+
+.icon-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 9999px;
+  border: 1px solid rgba(0,0,0,0.1);
+  background: #fff;
+  color: #252525;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.icon-btn:hover { cursor: pointer; background: #f4f4f4; }
+
+/* Fullscreen auth menu (opened by JS) */
 #fullscreen-menu { position: fixed; inset: 0; display: none; z-index: 3000; }
 #fullscreen-menu.open { display: flex; }
 #fullscreen-menu .fs-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.6); }
-#fullscreen-menu .fs-card { position: relative; margin: auto; display: flex; flex-direction: column; align-items: center; gap: 16px; background: transparent; padding: 16px; }
-#fullscreen-menu .fs-close { position: absolute; top: -8px; right: -8px; width: 36px; height: 36px; border-radius: 9999px; border: 0; background: #fff; color: #252525; font-weight: 700; cursor: pointer; }
+#fullscreen-menu .fs-card {
+  position: relative; margin: auto; display: flex; flex-direction: column;
+  align-items: center; gap: 16px; background: transparent; padding: 16px;
+}
+#fullscreen-menu .fs-close {
+  position: absolute; top: -8px; right: -8px; width: 36px; height: 36px;
+  border-radius: 9999px; border: 0; background: #fff; color: #252525; font-weight: 700; cursor: pointer;
+}
 #fullscreen-menu .fs-links { display: flex; flex-direction: column; gap: 12px; }
-#fullscreen-menu .fs-links a { text-decoration: none; padding: 10px 16px; background: #fff; border: 0; font-weight: 700; color: #252525; border-radius: 8px; text-align: center; }
+#fullscreen-menu .fs-links a {
+  text-decoration: none; padding: 10px 16px; background: #fff; border: 0;
+  font-weight: 700; color: #252525; border-radius: 8px; text-align: center;
+}
 #fullscreen-menu .fs-links a:hover { background: #f4f4f4; }
 
-.game-layout {
-    width: 100%;
-    justify-content: space-between;
-    padding: 20px;
-    box-sizing: border-box;
-    flex-direction: row;
-    display: flex;
-}
-
-.game-layout:hover{
-    cursor: pointer;
-}
+/* Hide legacy floating login icon if it exists */
+#login-shortcut { display: none; }
 
 #game-container {
     flex-direction: column;
@@ -181,44 +206,5 @@ input{
   margin-bottom: 8px;
 }
 
-/* Fixed top menu (stays at top while scrolling) */
-#top-menu {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 56px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px;
-  z-index: 3000;
-  pointer-events: none; /* only buttons receive clicks */
-}
-#top-menu .top-menu-left,
-#top-menu .top-menu-right {
-  pointer-events: auto;
-}
-
-.icon-btn {
-  width: 40px;
-  height: 40px;
-  border-radius: 9999px;
-  border: 1px solid rgba(0,0,0,0.1);
-  background: #fff;
-  color: #252525;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-.icon-btn:hover { background: #f4f4f4; cursor: pointer; }
-
-/* Offset content so the fixed bar doesn’t overlap */
-#game-lobby-container,
-#game-container,
-#auth-container {
-  margin-top: 56px;
-}
-
-/* Hide legacy floating login (if present) */
+/* Hide legacy floating login icon if it exists */
 #login-shortcut { display: none; }
