@@ -49,6 +49,11 @@ input{
     text-align-last: center;
 }
 
+#home-button {
+  visibility: hidden; /* hidden by default, shown only in-game */
+}
+
+
 /* Top-right login icon */
 #login-shortcut {
     position: fixed;

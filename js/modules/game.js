@@ -13,6 +13,7 @@ export function initGame() {
   const gameLobbyContainer = document.getElementById('game-lobby-container');
   const gameContainer = document.getElementById('game-container');
   const backButton = document.getElementById('back-button');
+  const homeButton = document.getElementById('home-button'); // ✅ new
   const startGameButton = document.getElementById('start-game-button');
   const lobbyStatus = document.getElementById('lobby-status');
   const board = document.querySelector('.board');
@@ -30,8 +31,9 @@ export function initGame() {
   let gameEnded = false;
   let timerSeconds = 15;
 
-  function showBack(show) {
+  function showBackAndHome(show) {
     if (backButton) backButton.style.visibility = show ? 'visible' : 'hidden';
+    if (homeButton) homeButton.style.visibility = show ? 'visible' : 'hidden';
   }
 
   async function stopGameAndGoToLogin() {
@@ -44,12 +46,28 @@ export function initGame() {
       currentGameId = null;
       if (gameContainer) gameContainer.style.display = 'none';
       if (gameLobbyContainer) gameLobbyContainer.style.display = 'none';
-      if (authContainer) authContainer.style.display = 'flex'; // go to login
-      showBack(false);
+      if (authContainer) authContainer.style.display = 'flex';
+      showBackAndHome(false);
+    }
+  }
+
+  async function stopGameAndGoToLobby() {
+    try {
+      if (unsubscribeFromGame) unsubscribeFromGame();
+      if (currentGameId) {
+        try { await updateDoc(doc(db, 'games', currentGameId), { status: 'ended' }); } catch {}
+      }
+    } finally {
+      currentGameId = null;
+      if (gameContainer) gameContainer.style.display = 'none';
+      if (authContainer) authContainer.style.display = 'none';
+      if (gameLobbyContainer) gameLobbyContainer.style.display = 'flex';
+      showBackAndHome(false);
     }
   }
 
   backButton?.addEventListener('click', stopGameAndGoToLogin);
+  homeButton?.addEventListener('click', stopGameAndGoToLobby);
 
   // Ensure Start Game always works (auto-guest if needed)
   startGameButton?.addEventListener('click', async () => {
@@ -156,6 +174,7 @@ export function initGame() {
   function joinGame(gameId) {
     gameLobbyContainer.style.display = 'none';
     gameContainer.style.display = 'flex';
+    showBackAndHome(true); // ✅ show buttons when game starts
     setGridLayout();
     gameEnded = false;
     board?.classList.remove('disabled');
@@ -175,7 +194,6 @@ export function initGame() {
       renderBoard(boardState, clickedBoxes);
       renderPlayerNames(players, playerNames);
 
-      // Use the same timer element everywhere
       if (gameData.status === 'ended') {
         gameEnded = true;
         clearInterval(timerInterval);
@@ -207,10 +225,6 @@ export function initGame() {
       }
     });
   }
-
-  // Remove any old leave button handlers if you had them
-  const oldLeave = document.getElementById('leave-game-button');
-  if (oldLeave) oldLeave.remove();
 
   board?.addEventListener('click', async (event) => {
     if (gameEnded || !currentGameId) return;

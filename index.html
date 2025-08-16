@@ -15,6 +15,13 @@
           <path d="M10 17l1.41-1.41L8.83 13H21v-2H8.83l2.58-2.59L10 7l-5 5 5 5z"/>
         </svg>
       </button>
+
+      <!-- ✅ New Home button -->
+      <button id="home-button" class="icon-btn" title="Home" aria-label="Home">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+        </svg>
+      </button>
     </div>
     <div class="top-menu-right">
       <button id="open-login-btn" class="icon-btn" title="Login" aria-label="Open login">
@@ -25,11 +32,7 @@
     </div>
   </div>
 
-  <!-- Remove any old floating shortcut to avoid duplicates -->
-  <!-- <div id="login-shortcut">...</div> -->
-
-  <!-- Make sure the lobby is visible on load; others hidden -->
-  <!-- Auth/login container (unchanged IDs) -->
+  <!-- Auth/login container -->
   <div id="auth-container" style="display: none;">
     <h2>Sign in</h2>
     <input id="email" type="email" placeholder="Email" />
@@ -52,11 +55,7 @@
 
   <!-- Game -->
   <div id="game-container" style="display:none;">
-    <!-- New header above names -->
-    <div class="game-header">
-      <!-- The login icon will be moved here at runtime (same element as lobby) -->
-    </div>
-
+    <div class="game-header"></div>
     <div id="player-names-container"></div>
     <div id="timer-container"></div>
     <div class="board"></div>
