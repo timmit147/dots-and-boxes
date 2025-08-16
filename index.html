@@ -7,10 +7,26 @@
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
-  <!-- Add this login icon -->
-  <div id="login-shortcut">
-    <button id="open-login-btn" title="Login" aria-label="Open login">👤</button>
+  <!-- Fixed top menu -->
+  <div id="top-menu">
+    <div class="top-menu-left">
+      <button id="back-button" class="icon-btn" title="Back" aria-label="Back">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M10 17l1.41-1.41L8.83 13H21v-2H8.83l2.58-2.59L10 7l-5 5 5 5z"/>
+        </svg>
+      </button>
+    </div>
+    <div class="top-menu-right">
+      <button id="open-login-btn" class="icon-btn" title="Login" aria-label="Open login">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-4.418 0-8 2.239-8 5v1h16v-1c0-2.761-3.582-5-8-5Z"/>
+        </svg>
+      </button>
+    </div>
   </div>
+
+  <!-- Remove old floating shortcut to avoid duplicates -->
+  <!-- <div id="login-shortcut">...</div> -->
 
   <!-- Make sure the lobby is visible on load; others hidden -->
   <!-- Auth/login container (unchanged IDs) -->
@@ -28,7 +44,7 @@
   </div>
 
   <!-- Lobby -->
-  <div id="game-lobby-container" style="display: flex;">
+  <div id="game-lobby-container" style="display:flex;">
     <h2>Dots & Boxes</h2>
     <button id="start-game-button">Start Game</button>
     <p id="lobby-status"></p>
@@ -46,6 +62,18 @@
     <div class="board"></div>
   </div>
 
+  <div id="auth-container" style="display:none;">
+    <h2>Sign in</h2>
+    <input id="email" type="email" placeholder="Email" />
+    <input id="password" type="password" placeholder="Password" />
+    <div>
+      <button id="signin-button">Sign in</button>
+      <button id="signup-button">Create account</button>
+      <button id="guest-login-button">Continue as guest</button>
+      <button id="signout-button">Sign out</button>
+    </div>
+    <p id="auth-status"></p>
+  </div>
   <!-- Keep this -->
   <script type="module" src="js/main.js"></script>
 </body>

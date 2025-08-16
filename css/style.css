@@ -181,6 +181,25 @@ input{
   margin-bottom: 8px;
 }
 
+/* Fixed top menu (stays at top while scrolling) */
+#top-menu {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  z-index: 3000;
+  pointer-events: none; /* only buttons receive clicks */
+}
+#top-menu .top-menu-left,
+#top-menu .top-menu-right {
+  pointer-events: auto;
+}
+
 .icon-btn {
   width: 40px;
   height: 40px;
@@ -192,20 +211,14 @@ input{
   align-items: center;
   justify-content: center;
 }
-.icon-btn:hover { cursor: pointer; background: #f4f4f4; }
+.icon-btn:hover { background: #f4f4f4; cursor: pointer; }
 
-/* Global login icon wrapper */
-#login-shortcut {
-  position: fixed;
-  top: 12px;
-  right: 12px;
-  z-index: 2000;
+/* Offset content so the fixed bar doesn’t overlap */
+#game-lobby-container,
+#game-container,
+#auth-container {
+  margin-top: 56px;
 }
 
-/* When placed inside the game header, make it flow with the layout (no fixed) */
-#login-shortcut.in-header {
-  position: static;
-  top: auto;
-  right: auto;
-  z-index: auto;
-}
+/* Hide legacy floating login (if present) */
+#login-shortcut { display: none; }

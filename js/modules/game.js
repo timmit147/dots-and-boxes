@@ -18,10 +18,10 @@ export function initGame() {
   const gameContainer = document.getElementById('game-container');
   const authContainer = document.getElementById('auth-container');
   const lobbyStatus = document.getElementById('lobby-status');
-  const leaveGameButton = document.getElementById('leave-game-button');
   const startGameButton = document.getElementById('start-game-button');
   const timerDisplay = document.getElementById('timer-container');
   const playerNamesContainer = document.getElementById('player-names-container');
+  const backButton = document.getElementById('back-button');
 
   // Grid setup
   setGridLayout();
@@ -122,12 +122,20 @@ export function initGame() {
     });
   }
 
-  leaveGameButton?.addEventListener('click', () => {
+  backButton?.addEventListener('click', leaveToLobby);
+
+  function leaveToLobby() {
     if (unsubscribeFromGame) unsubscribeFromGame();
     currentGameId = null;
-    gameLobbyContainer.style.display = 'flex';
-    gameContainer.style.display = 'none';
-  });
+    const gameLobbyContainer = document.getElementById('game-lobby-container');
+    const gameContainer = document.getElementById('game-container');
+    if (gameLobbyContainer) gameLobbyContainer.style.display = 'flex';
+    if (gameContainer) gameContainer.style.display = 'none';
+  }
+
+  // Remove any old leave button handlers if you had them
+  const oldLeave = document.getElementById('leave-game-button');
+  if (oldLeave) oldLeave.remove();
 
   board?.addEventListener('click', async (event) => {
     if (gameEnded || !currentGameId) return;

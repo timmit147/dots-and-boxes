@@ -22,6 +22,7 @@ export function initMenu() {
     const backdrop = overlay.querySelector('.fs-backdrop');
     const loginLink = overlay.querySelector('#fs-login-link');
     const signupLink = overlay.querySelector('#fs-signup-link');
+    const openBtn = document.getElementById('open-login-btn');
 
     const openMenu = () => {
       overlay.classList.add('open');
@@ -35,23 +36,7 @@ export function initMenu() {
     };
     const onEsc = (e) => { if (e.key === 'Escape') closeMenu(); };
 
-    // Bind to the ONE icon (it’s the same node, moved between body/header)
-    const bind = () => {
-      const btn = document.getElementById('open-login-btn');
-      btn?.addEventListener('click', openMenu);
-    };
-    bind();
-
-    // In case DOM is re-rendered, re-bind on focus
-    document.addEventListener('focusin', () => {
-      // ensure it's still bound
-      const btn = document.getElementById('open-login-btn');
-      if (btn && !btn.__fsBound) {
-        btn.addEventListener('click', openMenu);
-        btn.__fsBound = true;
-      }
-    });
-
+    openBtn?.addEventListener('click', openMenu);
     closeBtn?.addEventListener('click', closeMenu);
     backdrop?.addEventListener('click', closeMenu);
 
